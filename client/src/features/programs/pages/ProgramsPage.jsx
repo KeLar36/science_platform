@@ -51,7 +51,7 @@ export default function ProgramsPage() {
     <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-brand selection:text-white">
       <Navbar />
 
-      <main className="flex-grow pt-40 pb-24 px-4 md:px-6 relative">
+      <main className="flex-grow pt-40 pb-24 px-3 lg:px-0 relative">
         <div className="absolute inset-0 opacity-25 pointer-events-none z-0 bg-[radial-gradient(var(--border-color)_1px,transparent_1px)] [background-size:32px_32px]" />
         <div className="absolute top-40 left-1/4 w-96 h-96 bg-brand/[0.02] blur-[130px] rounded-full z-0 pointer-events-none" />
 

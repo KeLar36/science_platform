@@ -74,7 +74,7 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-purple-600 selection:text-white">
       <Navbar />
 
-      <main className="flex-grow pt-36 pb-24 px-3 md:px-0 max-w-7xl mx-auto w-full space-y-6 text-left">
+      <main className="flex-grow pt-36 pb-24 px-3 Lg:px-0 max-w-7xl mx-auto w-full space-y-6 text-left">
         <Breadcrumbs items={breadcrumbItems} />
 
         <div className="p-6 bg-bg-secondary/60 border border-border-color rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

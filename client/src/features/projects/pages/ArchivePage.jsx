@@ -51,7 +51,7 @@ export default function ArchivePage() {
     <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-brand selection:text-white">
       <Navbar />
 
-      <main className="flex-grow pt-40 pb-24 px-4 md:px-6 relative">
+      <main className="flex-grow pt-40 pb-24 px-3 lg:px-0 relative">
         <div className="max-w-7xl mx-auto relative z-10 flex flex-col gap-8">
           <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-border-color/65 pb-8 w-full">
             <div className="space-y-3 max-w-2xl text-left">

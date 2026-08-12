@@ -46,7 +46,7 @@ export default function ReviewerPage() {
     <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-brand selection:text-white">
       <Navbar />
 
-      <main className="flex-grow pt-36 pb-24 px-4 md:px-6 max-w-5xl mx-auto w-full space-y-6 relative z-10">
+      <main className="flex-grow pt-36 pb-24 px-3 lg:px-0 max-w-5xl mx-auto w-full space-y-6 relative z-10">
         <Breadcrumbs items={breadcrumbItems} />
 
         {alertMessage && (

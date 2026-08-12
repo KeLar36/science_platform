@@ -1,39 +1,48 @@
-# 🟣 Science Hub: Open Access Scientific Platform (in progress)
+# 🟣 Science Platform: Open Access & Review Management System
 
 ### 📋 Overview
 
-Many scientists struggle to share their work due to administrative and technical barriers. **Science Hub** is an open-access ecosystem designed to bridge this gap, providing a streamlined platform for sharing scientific articles, datasets, and educational courses.
+**Science Platform** is a multi-organizational, open-access web ecosystem designed to automate and streamline the evaluation, peer-review, and distribution of scientific articles, grant proposals, and educational initiatives. The platform mitigates administrative overhead, eliminates non-specialized review assignments, and ensures conflict-of-interest protection.
 
 ---
 
 ### 🏗️ Architectural Approach
 
-Built with the **MERN stack** (_MongoDB, Express, React, Node.js_), the platform prioritizes performance, security, and scalability:
+Built with the **MERN stack** (_MongoDB, Express, React, Node.js_) using **Feature-Driven Development (FDD)** principles, the platform prioritizes high performance, security, and deterministic reliability:
 
-- **SPA Architecture** – Optimized for a fast, responsive, and seamless user experience.
-- **Security-First Design** – Implemented **JWT-based authentication** via **HTTP-only cookies** to ensure robust user session management and advanced data protection.
-- **Role-Based Access Control (RBAC)** – A custom-engineered middleware system manages complex interactions between _Authors_, _Reviewers_, and _Admins_, ensuring data integrity at every stage of the lifecycle.
+- **FDD-Modular SPA Architecture** – Monolithic React client layer delivering high responsiveness, minimal network latency, and UI consistency without microfrontend overhead.
+- **Security-First Design** – Advanced **JWT-based authentication** stored via **HTTP-only cookies** for robust session management and data isolation.
+- **Role-Based Access Control (RBAC)** – Multi-tenant access management handling dynamic role changes between _Authors_, _Reviewers_, and _Admins_.
+- **Deterministic Expert Matching** – Multi-criteria selection algorithm balancing domain expertise (`allowedDomains`), publication types (`allowedTypes`), and workload minimization.
 
 ---
 
-### 🔄 Core Lifecycle: From Submission to Publication
+### 🔄 Core Lifecycle: From Submission to Peer-Review
 
-The platform features a sophisticated state machine for article management:
+The platform features a multi-stage lifecycle state machine supported by **Cascade Cleanup Logic** for handling edge cases:
 
-1. **Submission** ── Authorized authors submit their work to specific scientific programs.
-2. **Admin Triage** ── Admins oversee the workflow, moderate content, and assign submissions to appropriate reviewers.
-3. **Peer Review** ── Reviewers evaluate submissions with three potential outcomes:
-
-- `✅ Approved` ── Published directly to the public open-access archive.
-- `🔄 Revision` ── Sent back to the author for targeted improvements and re-evaluation.
-- `❌ Declined` ── Formally rejected to maintain high scientific and academic standards.
+1. **Submission** ── Authorized authors submit materials to specific organizational programs.
+2. **Deterministic Assignment** ── System automatically evaluates expert workload and domain compatibility, or Admins triage assigned submissions.
+3. **Peer Review** ── Reviewers evaluate submissions with three outcomes:
+   - `✅ Approved` ── Published to the public open-access archive.
+   - `🔄 Revision` ── Returned to the author for targeted improvements and re-evaluation.
+   - `❌ Declined` ── Rejected to maintain rigorous academic standards.
+4. **Exception Recovery** ── Cascade cleanup automatically re-routes queued items if a reviewer changes roles, is banned, or is unlinked from an organization.
 
 ---
 
 ### ⚡ Technical Highlights
 
-- **Efficient Data Management** – Schema-optimized MongoDB structure specifically tailored for handling diverse, relations-heavy scientific content.
-- **Streamlined User Journey** – Intuitive, secure, and user-friendly registration and authorization flows.
-- **Scalable Admin Dashboard** – Centralized control panel built for efficient content moderation and seamless peer-review orchestration.
+- **Aggregation Pipelines** – Schema-optimized MongoDB Atlas structures tailored for complex multi-criteria filtering.
+- **Dev-Time LLM Integration** – Architectural planning and boundary-case simulation assisted by Large Language Models during system design.
+- **Dual-Channel Notifications** – Real-time In-App and Email alerts ensuring prompt action on queue state changes.
 
 ---
+
+### 🚀 Getting Started
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/KeLar36/science_hub.git](https://github.com/KeLar36/science_hub.git)
+   cd science-hub
+   ```

@@ -153,7 +153,7 @@ export default function OrganizationDashboard() {
     <>
       <Navbar />
 
-      <div className="max-w-7xl mx-auto p-3 lg:p-0 space-y-6 text-left my-20">
+      <div className="max-w-7xl py-5 mx-auto px-3 lg:px-0 space-y-6 text-left my-20">
         <Breadcrumbs items={breadcrumbItems} />
 
         <Card className="p-6 bg-bg-secondary/60 border-border-color backdrop-blur-xs">

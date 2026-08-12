@@ -140,7 +140,7 @@ export default function ContentManagerPage() {
       <Navbar />
 
       <main className="mx-auto mt-20">
-        <div className="max-w-6xl mx-auto p-6 space-y-6 bg-bg-primary text-text-primary min-h-screen text-left">
+        <div className="max-w-6xl mx-auto py-6 px-3 lg:px-0 space-y-6 bg-bg-primary text-text-primary min-h-screen text-left">
           <Breadcrumbs items={breadcrumbItems} />
 
           {/* Авто-алерт сповіщень */}

@@ -31,7 +31,7 @@ export default function BlogPage() {
       <div className="absolute top-0 left-1/4 w-[600px] h-[300px] bg-brand opacity-[0.02] dark:opacity-[0.04] blur-[130px] pointer-events-none" />
 
       <Navbar />
-      <main className="flex-grow pt-32 pb-24 px-6 relative z-10">
+      <main className="flex-grow pt-32 pb-24 px-3 lg:px-0 relative z-10">
         <div className="max-w-7xl mx-auto space-y-10">
           <Breadcrumbs items={breadcrumbItems} />
           <BlogHero />

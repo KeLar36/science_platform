@@ -123,9 +123,8 @@ export default function AboutPage() {
     <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-brand selection:text-white">
       <Navbar />
 
-      <main className="flex-grow pt-36 pb-24 space-y-20 relative z-10">
-        {/* HERO SECTION */}
-        <section className="px-4 md:px-6 max-w-7xl mx-auto w-full space-y-6 text-left">
+      <main className="flex-grow pt-36 pb-24 px-3 lg:px-0 space-y-20 relative z-10">
+        <section className="max-w-7xl mx-auto w-full space-y-6 text-left">
           <Breadcrumbs items={breadcrumbItems} />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -177,25 +176,21 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* 🔮 Повернена анімована картка з колбою та блискавкою */}
             <div className="lg:col-span-4 hidden lg:block">
               <Card
                 hoverable
                 className="border-brand/30 bg-bg-secondary/60 text-center p-8 relative overflow-hidden group"
               >
                 <div className="aspect-square bg-bg-primary/50 border border-border-color rounded-2xl relative z-10 flex items-center justify-center transition-all duration-500 hover:border-brand/40 shadow-sm">
-                  {/* Колба з ефектом обертання та збільшення */}
                   <FlaskConical
                     size={80}
                     className="text-brand transition-all duration-700 ease-out group-hover:scale-105 group-hover:rotate-3 opacity-95"
                   />
 
-                  {/* Анімована пульсуюча блискавка */}
                   <div className="absolute top-6 right-6 p-2.5 bg-bg-secondary border border-border-color rounded-xl animate-bounce shadow-sm">
                     <Zap size={14} className="text-brand" />
                   </div>
 
-                  {/* Сяюча бейдж-іконка */}
                   <div className="absolute bottom-6 left-6 p-3 bg-brand text-white rounded-xl shadow-lg shadow-brand/20">
                     <Sparkles size={16} />
                   </div>
@@ -214,13 +209,12 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* FEATURES SECTION */}
-        <section className="px-4 md:px-6 max-w-7xl mx-auto w-full">
+        <section className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {features.map((item, idx) => {
               const Icon = item.icon;
               return (
-                <Card key={idx} hoverable className="p-6 text-left space-y-3">
+                <Card key={idx} hoverable className="text-left space-y-3">
                   <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
                     <Icon size={20} />
                   </div>
@@ -236,8 +230,7 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* WORKFLOW (TIMELINE) */}
-        <section className="px-4 md:px-6 max-w-7xl mx-auto w-full space-y-8 text-left">
+        <section className="max-w-7xl mx-auto w-full space-y-8 text-left">
           <div className="space-y-2">
             <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
               // Інфраструктура
@@ -252,8 +245,7 @@ export default function AboutPage() {
           </Card>
         </section>
 
-        {/* TECH STACK SECTION */}
-        <section className="px-4 md:px-6 max-w-7xl mx-auto w-full space-y-10 text-left">
+        <section className="max-w-7xl mx-auto w-full space-y-10 text-left">
           <div className="space-y-2">
             <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
               // Інженерний стек
@@ -272,7 +264,7 @@ export default function AboutPage() {
                     <div className="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
                       <Icon size={16} />
                     </div>
-                    <div className="font-mono text-xs font-bold text-text-primary uppercase">
+                    <div className="font-mono text-xs font-bold text-text-primary uppercase mt-2">
                       {tech.name}
                     </div>
                     <div className="text-[11px] text-text-muted leading-relaxed">
@@ -285,7 +277,7 @@ export default function AboutPage() {
 
             <div className="lg:col-span-5">
               <Card className="p-6 space-y-4 bg-brand/5 border-brand/20">
-                <h4 className="text-xs font-mono font-bold uppercase text-brand tracking-widest">
+                <h4 className="text-xs font-mono font-bold uppercase text-brand tracking-widest mb-2">
                   Стандарти безпеки та платформи
                 </h4>
                 <div className="space-y-2.5">
@@ -304,8 +296,7 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* FINAL CTA */}
-        <section className="px-4 md:px-6 max-w-4xl mx-auto w-full">
+        <section className="max-w-4xl mx-auto w-full">
           <Card className="p-10 text-center space-y-6 bg-gradient-to-b from-bg-secondary to-bg-tertiary/40 border-brand/30">
             <div className="space-y-2">
               <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">

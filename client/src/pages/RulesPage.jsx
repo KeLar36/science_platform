@@ -91,7 +91,7 @@ export default function RulesPage() {
 
       <Navbar />
 
-      <main className="flex-grow pt-36 pb-24 px-4 md:px-6 relative z-10 space-y-16">
+      <main className="flex-grow pt-36 pb-24 px-3 lg:px-0 relative z-10 space-y-16">
         <div className="max-w-7xl mx-auto space-y-8 text-left">
           <Breadcrumbs items={breadcrumbItems} />
 

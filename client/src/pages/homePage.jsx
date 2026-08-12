@@ -107,8 +107,8 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-brand selection:text-white">
       <Navbar />
 
-      <main className="flex-grow pt-32 pb-24 space-y-20 relative z-10">
-        <section className="px-4 md:px-6 max-w-7xl mx-auto w-full">
+      <main className="flex-grow px-3 lg:px-0 pt-32 pb-24 space-y-20 relative z-10">
+        <section className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-7 space-y-6 text-left">
               <Badge status="success" className="gap-1.5 py-1 px-3">
@@ -219,7 +219,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="px-4 md:px-6 max-w-7xl mx-auto w-full">
+        <section className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <AnalyticsCard
               title="Активні можливості"
@@ -246,7 +246,7 @@ export default function HomePage() {
         </section>
 
         {organizations.length > 0 && (
-          <section className="px-4 md:px-6 max-w-7xl mx-auto w-full space-y-4 text-left">
+          <section className="max-w-7xl mx-auto w-full space-y-4 text-left">
             <span className="text-xs font-mono uppercase text-text-muted tracking-widest font-bold">
               // Партнерські установи та ЗВО
             </span>
@@ -265,7 +265,7 @@ export default function HomePage() {
           </section>
         )}
 
-        <section className="px-4 md:px-6 max-w-7xl mx-auto w-full space-y-8 text-left">
+        <section className="max-w-7xl mx-auto w-full space-y-8 text-left">
           <div className="space-y-2">
             <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
               // Дорожня карта
@@ -280,7 +280,7 @@ export default function HomePage() {
           </Card>
         </section>
 
-        <section className="px-4 md:px-6 max-w-4xl mx-auto w-full space-y-8 text-left">
+        <section className="max-w-4xl mx-auto w-full space-y-8 text-left">
           <div className="text-center space-y-2">
             <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
               // Запитання та відповіді

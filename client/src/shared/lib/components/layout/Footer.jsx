@@ -14,7 +14,7 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="relative overflow-hidden border-t border-border-color bg-bg-primary pt-24 pb-12 px-6 text-left">
+    <footer className="relative overflow-hidden border-t border-border-color bg-bg-primary pt-24 pb-12 px-3 lg:px-0 text-left">
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[250px] bg-brand opacity-[0.03] dark:opacity-[0.05] blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto relative z-10">
@@ -126,10 +126,10 @@ export default function Footer() {
                     Help Desk Support
                   </p>
                   <a
-                    href="mailto:support@scienceplatform.edu"
+                    href="mailto:support.scienceplatform@gmail.com"
                     className="text-xs text-text-primary font-bold hover:text-brand transition-colors mt-0.5"
                   >
-                    support@scienceplatform.edu
+                    support.scienceplatform@gmail.com
                   </a>
                 </div>
               </div>
