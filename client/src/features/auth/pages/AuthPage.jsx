@@ -4,8 +4,6 @@ import { useAuth } from "@/shared/lib/context/AuthContext";
 import { ChevronLeft, Sparkles } from "lucide-react";
 import Navbar from "@/shared/lib/components/layout/Navbar";
 import Footer from "@/shared/lib/components/layout/Footer";
-import AOS from "aos";
-import "aos/dist/aos.css";
 import Tabs from "@/shared/ui/Tabs";
 import { useAuthForms } from "@/features/auth/hooks/useAuthForms";
 import LoginForm from "@/features/auth/components/LoginForm";
@@ -30,7 +28,6 @@ export default function AuthPage() {
   } = useAuthForms();
 
   useEffect(() => {
-    AOS.init({ duration: 600, once: true });
     if (user && !loading) navigate("/profile");
   }, [user, loading, navigate]);
 
