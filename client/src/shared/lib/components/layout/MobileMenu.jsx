@@ -60,9 +60,9 @@ export default function MobileMenu({
 
         <div className="border-t border-border-color pt-4 space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex-1 px-3.5 py-1.5 bg-bg-tertiary/50 border border-border-color rounded-xl">
+            <div className="flex-1 justify-right px-2 py-1.5">
               <Toggle
-                label="Темна тема"
+                label={"Налаштуваня"}
                 checked={theme === "dark"}
                 onChange={toggleTheme}
                 iconOff={Moon}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
 import {
   Sparkles,
   ArrowRight,
@@ -20,11 +21,18 @@ import AnalyticsCard from "@/shared/ui/AnalyticsCard";
 import Timeline from "@/shared/ui/Timeline";
 import Accordion from "@/shared/ui/Accordion";
 import Loader from "@/shared/ui/Loader";
+import ScrollReveal from "@/shared/ui/ScrollReveal";
+import {
+  fadeInLeft,
+  fadeInRight,
+  fadeInUp,
+  staggerContainer,
+  staggerItem,
+} from "@/shared/config/animation";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-
   const [totalPrograms, setTotalPrograms] = useState(0);
   const [totalOrgs, setTotalOrgs] = useState(0);
   const [organizations, setOrganizations] = useState([]);
@@ -107,10 +115,13 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-brand selection:text-white">
       <Navbar />
 
-      <main className="flex-grow px-3 lg:px-0 pt-32 pb-24 space-y-20 relative z-10">
+      <main className="flex-grow px-3 lg:px-0 pt-32 pb-24 space-y-20 relative z-10 overflow-hidden">
         <section className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-7 space-y-6 text-left">
+            <ScrollReveal
+              variants={fadeInLeft}
+              className="lg:col-span-7 space-y-6 text-left"
+            >
               <Badge status="success" className="gap-1.5 py-1 px-3">
                 <Sparkles size={12} className="text-brand" />
                 <span>Open Science Platform Ukraine</span>
@@ -140,11 +151,13 @@ export default function HomePage() {
                   {isAuthenticated ? "Каталог програм" : "Приєднатися"}
                 </Button>
 
-                <Link href="/about" variant="underline">
-                  <Button variant="outline" size="lg">
-                    Дізнатися більше
-                  </Button>
-                </Link>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => navigate("/about")}
+                >
+                  Дізнатися більше
+                </Button>
               </div>
 
               <div className="pt-6 border-t border-border-color flex flex-wrap gap-6 text-xs font-mono text-text-muted">
@@ -157,9 +170,12 @@ export default function HomePage() {
                   GDPR стандарти
                 </span>
               </div>
-            </div>
-
-            <div className="lg:col-span-5">
+            </ScrollReveal>
+            <ScrollReveal
+              variants={fadeInRight}
+              delay={0.2}
+              className="lg:col-span-5"
+            >
               <Card hoverable className="border-brand/30 bg-bg-secondary/80">
                 <div className="space-y-6 text-left">
                   <div className="flex items-center justify-between pb-4 border-b border-border-color">
@@ -180,7 +196,10 @@ export default function HomePage() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="p-3 bg-bg-tertiary rounded-lg border border-border-color flex items-center justify-between">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="p-3 bg-bg-tertiary rounded-lg border border-border-color flex items-center justify-between transition-shadow"
+                    >
                       <div className="flex items-center gap-2">
                         <Search size={14} className="text-brand" />
                         <span className="text-xs font-semibold text-text-primary font-sans">
@@ -190,9 +209,12 @@ export default function HomePage() {
                       <span className="font-mono text-xs text-brand font-bold">
                         100%
                       </span>
-                    </div>
+                    </motion.div>
 
-                    <div className="p-3 bg-bg-tertiary rounded-lg border border-border-color flex items-center justify-between">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="p-3 bg-bg-tertiary rounded-lg border border-border-color flex items-center justify-between transition-shadow"
+                    >
                       <div className="flex items-center gap-2">
                         <Award size={14} className="text-brand" />
                         <span className="text-xs font-semibold text-text-primary font-sans">
@@ -202,10 +224,10 @@ export default function HomePage() {
                       <span className="font-mono text-xs font-bold text-text-primary">
                         Horizon Europe
                       </span>
-                    </div>
+                    </motion.div>
                   </div>
 
-                  <div className="p-4 bg-brand text-white rounded-lg space-y-1">
+                  <div className="p-4 bg-brand text-white rounded-lg space-y-1 shadow-md">
                     <span className="text-[10px] font-mono uppercase tracking-widest text-white/80">
                       Статус системи
                     </span>
@@ -215,57 +237,73 @@ export default function HomePage() {
                   </div>
                 </div>
               </Card>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
-
         <section className="max-w-7xl mx-auto w-full">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <AnalyticsCard
-              title="Активні можливості"
-              value={`${totalPrograms}+`}
-              trend="+15%"
-              trendType="up"
-              description="Гранти, публікації в журналах та конференції"
-            />
-            <AnalyticsCard
-              title="Зареєстровані ЗВО / НДІ"
-              value={`${totalOrgs}+`}
-              trend="+8%"
-              trendType="up"
-              description="Офіційно підтверджені установи України"
-            />
-            <AnalyticsCard
-              title="Відкритий доступ (Open Access)"
-              value="100%"
-              trend="Стабільно"
-              trendType="up"
-              description="Публічні датасети та анотовані репозиторії"
-            />
-          </div>
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            variants={staggerContainer(0.15)}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            <motion.div variants={staggerItem}>
+              <AnalyticsCard
+                title="Активні можливості"
+                value={`${totalPrograms}+`}
+                trend="+15%"
+                trendType="up"
+                description="Гранти, публікації в журналах та конференції"
+              />
+            </motion.div>
+            <motion.div variants={staggerItem}>
+              <AnalyticsCard
+                title="Зареєстровані ЗВО / НДІ"
+                value={`${totalOrgs}+`}
+                trend="+8%"
+                trendType="up"
+                description="Офіційно підтверджені установи України"
+              />
+            </motion.div>
+            <motion.div variants={staggerItem}>
+              <AnalyticsCard
+                title="Відкритий доступ (Open Access)"
+                value="100%"
+                trend="Стабільно"
+                trendType="up"
+                description="Публічні датасети та анотовані репозиторії"
+              />
+            </motion.div>
+          </motion.div>
         </section>
-
         {organizations.length > 0 && (
-          <section className="max-w-7xl mx-auto w-full space-y-4 text-left">
+          <ScrollReveal
+            variants={fadeInUp}
+            className="max-w-7xl mx-auto w-full space-y-4 text-left"
+          >
             <span className="text-xs font-mono uppercase text-text-muted tracking-widest font-bold">
               // Партнерські установи та ЗВО
             </span>
 
             <div className="p-6 bg-bg-secondary border border-border-color rounded-xl flex flex-wrap items-center justify-around gap-8">
               {organizations.map((org, idx) => (
-                <div
+                <motion.div
                   key={org._id || idx}
+                  whileHover={{ scale: 1.08 }}
                   className="flex items-center gap-2 font-mono text-xs font-bold text-text-muted hover:text-brand transition-colors cursor-pointer"
                 >
                   <Building2 size={16} className="text-brand" />
                   <span>{org.name}</span>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </section>
+          </ScrollReveal>
         )}
-
-        <section className="max-w-7xl mx-auto w-full space-y-8 text-left">
+        <ScrollReveal
+          variants={fadeInUp}
+          className="max-w-7xl mx-auto w-full space-y-8 text-left"
+        >
           <div className="space-y-2">
             <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
               // Дорожня карта
@@ -278,9 +316,11 @@ export default function HomePage() {
           <Card className="p-8 bg-bg-secondary/60">
             <Timeline steps={timelineSteps} />
           </Card>
-        </section>
-
-        <section className="max-w-4xl mx-auto w-full space-y-8 text-left">
+        </ScrollReveal>
+        <ScrollReveal
+          variants={fadeInUp}
+          className="max-w-4xl mx-auto w-full space-y-8 text-left"
+        >
           <div className="text-center space-y-2">
             <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
               // Запитання та відповіді
@@ -297,7 +337,7 @@ export default function HomePage() {
               </Accordion>
             ))}
           </div>
-        </section>
+        </ScrollReveal>
       </main>
 
       <Footer />

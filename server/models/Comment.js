@@ -26,4 +26,7 @@ const CommentSchema = new mongoose.Schema({
   },
 });
 
+CommentSchema.index({ postId: 1, createdAt: -1 });
+CommentSchema.index({ projectId: 1, createdAt: -1 });
+
 module.exports = mongoose.model("Comment", CommentSchema);

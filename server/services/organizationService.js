@@ -71,9 +71,10 @@ class OrganizationService {
   }
 
   async getById(id) {
-    const organization = await Organization.findById(id)
-      .populate("creatorId", "name email")
-      .populate("members", "name email role image");
+    const organization = await Organization.findById(id).populate(
+      "creatorId",
+      "name email",
+    );
 
     if (!organization) {
       const error = new Error("Організацію не знайдено");
@@ -170,7 +171,7 @@ class OrganizationService {
       creatorId: userId,
       status: "pending",
       isVerified: false,
-      members: [userId],
+      allowPublicJoin: true,
     });
 
     await newOrg.save();
@@ -258,10 +259,6 @@ class OrganizationService {
       throw error;
     }
 
-    await Organization.findByIdAndUpdate(user.organizationId, {
-      $pull: { members: userId },
-    });
-
     const originalRole = user.role;
     user.organizationId = null;
     user.role = "user";
@@ -277,28 +274,31 @@ class OrganizationService {
   }
 
   async getOrganizationUsers(orgId, page = 1, limit = 8) {
-    const skip = (page - 1) * limit;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 8);
+    const skip = (pageNum - 1) * limitNum;
 
-    const org = await Organization.findById(orgId).select("members").populate({
-      path: "members",
-      select: "name email role city socials isBanned image",
-      options: { skip, limit },
-    });
+    const objectOrgId = mongoose.Types.ObjectId.isValid(orgId)
+      ? new mongoose.Types.ObjectId(orgId)
+      : orgId;
 
-    if (!org) {
-      const error = new Error("Організацію не знайдено");
-      error.statusCode = 404;
-      throw error;
-    }
+    const filter = {
+      $or: [{ organizationId: objectOrgId }, { organizationId: String(orgId) }],
+    };
 
-    const totalOrg = await Organization.findById(orgId).select("members");
-    const totalItems = totalOrg?.members?.length || 0;
-    const totalPages = Math.ceil(totalItems / limit);
+    const totalItems = await User.countDocuments(filter);
+    const totalPages = Math.ceil(totalItems / limitNum) || 1;
+
+    const items = await User.find(filter)
+      .select("name email role city socials isBanned image")
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
 
     return {
-      items: org.members || [],
-      currentPage: Number(page),
-      totalPages: totalPages || 1,
+      items,
+      currentPage: pageNum,
+      totalPages,
       totalItems,
     };
   }
@@ -499,14 +499,6 @@ class OrganizationService {
       (req) => req.userId.toString() !== userId.toString(),
     );
 
-    const isAlreadyMember = organization.members.some(
-      (memberId) => memberId.toString() === userId.toString(),
-    );
-
-    if (!isAlreadyMember) {
-      organization.members.push(userId);
-    }
-
     await organization.save();
 
     const user = await User.findById(userId);
@@ -607,11 +599,6 @@ class OrganizationService {
       throw error;
     }
 
-    org.members = org.members.filter(
-      (m) => m && m.toString() !== targetUserIdStr,
-    );
-    await org.save();
-
     const user = await User.findById(targetUserId);
     if (user) {
       user.organizationId = null;
@@ -673,17 +660,13 @@ class OrganizationService {
       throw error;
     }
 
-    const isMember = org.members.some(
-      (m) => m.toString() === targetUserId.toString(),
-    );
+    const targetUser = await User.findById(targetUserId);
 
-    if (!isMember) {
+    if (!targetUser || targetUser.organizationId?.toString() !== cleanOrgId) {
       const error = new Error("Користувач не є членом цієї організації");
       error.statusCode = 404;
       throw error;
     }
-
-    const targetUser = await User.findById(targetUserId).select("role");
 
     if (
       targetUser &&
@@ -784,11 +767,9 @@ class OrganizationService {
       throw error;
     }
 
-    const isMember = org.members.some(
-      (memberId) => memberId.toString() === newOwnerId.toString(),
-    );
+    const newOwner = await User.findById(newOwnerId);
 
-    if (!isMember) {
+    if (!newOwner || newOwner.organizationId?.toString() !== orgId.toString()) {
       const error = new Error(
         "Новий власник повинен бути членом цієї організації!",
       );
@@ -994,26 +975,28 @@ class OrganizationService {
     );
 
     try {
-      const posts = await Post.find({ organizationId: orgId });
-      let deletedPostsCount = 0;
-
-      for (const post of posts) {
-        if (post.images && post.images.length > 0) {
-          for (const img of post.images) {
-            if (img.publicId) {
-              await cloudinary.uploader.destroy(img.publicId);
-            }
-          }
-        }
-        await Comment.deleteMany({ postId: post._id });
-        await Post.findByIdAndDelete(post._id);
-        deletedPostsCount++;
-      }
-      console.log(
-        `  ↳ Медіа-блог зачищено: видалено ${deletedPostsCount} постів разом з їхніми коментарями.`,
+      const orgMembers = await User.find({ organizationId: orgId }).select(
+        "_id",
       );
-    } catch (err) {
-      console.error("Помилка при видаленні медіа-блогу установи:", err);
+      const membersToNotify = orgMembers
+        .map((m) => m._id)
+        .filter((mId) => mId.toString() !== requestUserId.toString());
+
+      for (const memberId of membersToNotify) {
+        await notificationService.createNotification({
+          recipientId: memberId,
+          title: "Установу розформовано",
+          message: `Установу, в якій ви перебували, було видалено. Ваш профіль переведено у статус звичайного дослідника.`,
+          type: "SYSTEM_INFO",
+          link: "/profile",
+          sendEmail: true,
+        });
+      }
+    } catch (notifErr) {
+      console.error(
+        "Помилка сповіщення членів при видаленні організації:",
+        notifErr,
+      );
     }
 
     try {

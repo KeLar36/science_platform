@@ -107,13 +107,6 @@ const OrganizationSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    members: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        index: true,
-      },
-    ],
     joinRequests: [
       {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

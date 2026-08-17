@@ -7,12 +7,10 @@ import {
   Navigate,
 } from "react-router-dom";
 import "react-datepicker/dist/react-datepicker.css";
-
+import ScrollToTop from "@/shared/lib/components/ScrollToTop";
 import { AuthProvider } from "@/shared/lib/context/AuthContext";
 import { useAuth } from "@/shared/lib/hooks/useAuth";
-
 import Loader from "@/shared/ui/Loader";
-
 const ContentManagerPage = lazy(
   () => import("@/features/content-manager/pages/ContentManagerPage"),
 );
@@ -32,18 +30,15 @@ const ArchivePage = lazy(() => import("@/features/projects/pages/ArchivePage"));
 const ReviewerPage = lazy(
   () => import("@/features/reviewer/pages/ReviewerPage"),
 );
-
 const ProjectDetailPage = lazy(
   () => import("@/features/projects/pages/ProjectDetailPage"),
 );
-
 const ProgramsPage = lazy(
   () => import("@/features/programs/pages/ProgramsPage"),
 );
 const ProgramDetailsPage = lazy(
   () => import("@/features/programs/pages/ProgramDetails"),
 );
-
 const Blog = lazy(() => import("@/features/blog/pages/BlogPage"));
 const PostDetail = lazy(() => import("@/features/blog/pages/PostDetail"));
 const AuthPage = lazy(() => import("@/features/auth/pages/AuthPage"));
@@ -52,7 +47,6 @@ const ProfilePage = lazy(() => import("@/features/user/pages/ProfilePage"));
 const AdminDashboardPage = lazy(
   () => import("@/features/admin/pages/AdminDashboardPage"),
 );
-
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, user, loading } = useAuth();
 
@@ -69,6 +63,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 function AppContent() {
   return (
     <Router>
+      <ScrollToTop />
       <Suspense fallback={<Loader fullScreen />}>
         <Routes>
           {/* ================================================================ */}

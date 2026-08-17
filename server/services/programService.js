@@ -242,7 +242,6 @@ class ProgramService {
     const ProjectModel = mongoose.model("Project");
 
     try {
-      // 💡 Змінено userId на authorId!
       const allProjects = await ProjectModel.find({ programId }).select(
         "authorId",
       );
@@ -261,7 +260,7 @@ class ProgramService {
           message: `Дедлайн прийому заявок для програми "${program.title}" завершився. Прийом заявок закрито.`,
           type: "SYSTEM_INFO",
           link: `/programs/${program._id}`,
-          sendEmail: true, // Про завершення дедлайну важливо повідомити на пошту
+          sendEmail: true,
         });
       }
     } catch (error) {
@@ -307,7 +306,6 @@ class ProgramService {
     await program.save();
 
     try {
-      // 💡 Змінено userId на authorId!
       const allProjects = await ProjectModel.find({ programId }).select(
         "authorId",
       );

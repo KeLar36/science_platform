@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
 import {
   Sparkles,
   ArrowRight,
@@ -25,6 +26,14 @@ import Button from "@/shared/ui/Button";
 import Badge from "@/shared/ui/Badge";
 import Breadcrumbs from "@/shared/ui/Breadcrumbs";
 import Timeline from "@/shared/ui/Timeline";
+import ScrollReveal from "@/shared/ui/ScrollReveal";
+import {
+  fadeInLeft,
+  fadeInRight,
+  fadeInUp,
+  staggerContainer,
+  staggerItem,
+} from "@/shared/config/animation";
 
 export default function AboutPage() {
   const navigate = useNavigate();
@@ -123,12 +132,15 @@ export default function AboutPage() {
     <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-brand selection:text-white">
       <Navbar />
 
-      <main className="flex-grow pt-36 pb-24 px-3 lg:px-0 space-y-20 relative z-10">
+      <main className="flex-grow pt-36 pb-24 px-3 lg:px-0 space-y-20 relative z-10 overflow-hidden">
         <section className="max-w-7xl mx-auto w-full space-y-6 text-left">
           <Breadcrumbs items={breadcrumbItems} />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-8 space-y-6">
+            <ScrollReveal
+              variants={fadeInLeft}
+              className="lg:col-span-8 space-y-6"
+            >
               <Badge status="success" className="gap-1.5 py-1 px-3">
                 <Sparkles size={12} className="text-brand" />
                 <span>SciencePlatform / Mission 2026</span>
@@ -174,9 +186,13 @@ export default function AboutPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </ScrollReveal>
 
-            <div className="lg:col-span-4 hidden lg:block">
+            <ScrollReveal
+              variants={fadeInRight}
+              delay={0.2}
+              className="lg:col-span-4 hidden lg:block"
+            >
               <Card
                 hoverable
                 className="border-brand/30 bg-bg-secondary/60 text-center p-8 relative overflow-hidden group"
@@ -205,32 +221,41 @@ export default function AboutPage() {
                   </p>
                 </div>
               </Card>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
-
         <section className="max-w-7xl mx-auto w-full">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            variants={staggerContainer(0.1)}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
             {features.map((item, idx) => {
               const Icon = item.icon;
               return (
-                <Card key={idx} hoverable className="text-left space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
-                    <Icon size={20} />
-                  </div>
-                  <h3 className="text-base font-bold font-sans uppercase tracking-wide text-text-primary">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    {item.desc}
-                  </p>
-                </Card>
+                <motion.div key={idx} variants={staggerItem}>
+                  <Card hoverable className="text-left space-y-3 h-full">
+                    <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+                      <Icon size={20} />
+                    </div>
+                    <h3 className="text-base font-bold font-sans uppercase tracking-wide text-text-primary">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </Card>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </section>
-
-        <section className="max-w-7xl mx-auto w-full space-y-8 text-left">
+        <ScrollReveal
+          variants={fadeInUp}
+          className="max-w-7xl mx-auto w-full space-y-8 text-left"
+        >
           <div className="space-y-2">
             <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
               // Інфраструктура
@@ -243,39 +268,50 @@ export default function AboutPage() {
           <Card className="p-8 bg-bg-secondary/60">
             <Timeline steps={stepsTimeline} />
           </Card>
-        </section>
-
+        </ScrollReveal>
         <section className="max-w-7xl mx-auto w-full space-y-10 text-left">
-          <div className="space-y-2">
+          <ScrollReveal variants={fadeInUp} className="space-y-2">
             <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
               // Інженерний стек
             </span>
             <h2 className="text-2xl md:text-3xl font-black font-sans uppercase tracking-tight">
               Побудовано на надійній архітектурі
             </h2>
-          </div>
+          </ScrollReveal>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <motion.div
+              className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4"
+              variants={staggerContainer(0.08)}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
+            >
               {techCards.map((tech, idx) => {
                 const Icon = tech.icon;
                 return (
-                  <Card key={idx} className="p-4 space-y-2 bg-bg-secondary/40">
-                    <div className="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
-                      <Icon size={16} />
-                    </div>
-                    <div className="font-mono text-xs font-bold text-text-primary uppercase mt-2">
-                      {tech.name}
-                    </div>
-                    <div className="text-[11px] text-text-muted leading-relaxed">
-                      {tech.desc}
-                    </div>
-                  </Card>
+                  <motion.div key={idx} variants={staggerItem}>
+                    <Card className="p-4 space-y-2 bg-bg-secondary/40 h-full">
+                      <div className="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
+                        <Icon size={16} />
+                      </div>
+                      <div className="font-mono text-xs font-bold text-text-primary uppercase mt-2">
+                        {tech.name}
+                      </div>
+                      <div className="text-[11px] text-text-muted leading-relaxed">
+                        {tech.desc}
+                      </div>
+                    </Card>
+                  </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
 
-            <div className="lg:col-span-5">
+            <ScrollReveal
+              variants={fadeInRight}
+              delay={0.15}
+              className="lg:col-span-5"
+            >
               <Card className="p-6 space-y-4 bg-brand/5 border-brand/20">
                 <h4 className="text-xs font-mono font-bold uppercase text-brand tracking-widest mb-2">
                   Стандарти безпеки та платформи
@@ -292,11 +328,10 @@ export default function AboutPage() {
                   ))}
                 </div>
               </Card>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
-
-        <section className="max-w-4xl mx-auto w-full">
+        <ScrollReveal variants={fadeInUp} className="max-w-4xl mx-auto w-full">
           <Card className="p-10 text-center space-y-6 bg-gradient-to-b from-bg-secondary to-bg-tertiary/40 border-brand/30">
             <div className="space-y-2">
               <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
@@ -324,7 +359,7 @@ export default function AboutPage() {
               </Button>
             </div>
           </Card>
-        </section>
+        </ScrollReveal>
       </main>
 
       <Footer />

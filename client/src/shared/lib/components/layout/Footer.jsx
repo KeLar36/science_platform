@@ -157,7 +157,7 @@ export default function Footer() {
             <div className="flex items-center gap-2 px-3 py-1 bg-bg-secondary border border-border-color rounded-lg shadow-sm">
               <Boxes className="w-3.5 h-3.5 text-brand" />
               <span className="text-[9px] text-text-primary font-mono font-bold uppercase tracking-wider">
-                Магістерська дисертація
+                Магістерська Робота
               </span>
             </div>
           </div>

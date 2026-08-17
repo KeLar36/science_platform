@@ -7,7 +7,11 @@ import { useContentManager } from "@/features/content-manager/hooks/useContentMa
 
 export function useOrganizationDashboard(orgId) {
   const [orgData, setOrgData] = useState(null);
-  const [members, setMembers] = useState([]);
+  const [members, setMembers] = useState({
+    items: [],
+    totalPages: 1,
+    currentPage: 1,
+  });
   const [programs, setPrograms] = useState([]);
   const [posts, setPosts] = useState([]);
   const [submittedProjects, setSubmittedProjects] = useState([]);
@@ -47,7 +51,11 @@ export function useOrganizationDashboard(orgId) {
       try {
         setLoadingMembers(true);
         const res = await organizationApi.getUsers(orgId, page);
-        setMembers(res.items || res || []);
+        setMembers({
+          items: res.items || [],
+          totalPages: res.totalPages || 1,
+          currentPage: res.currentPage || page,
+        });
       } catch (err) {
         console.error("Помилка завантаження учасників:", err);
       } finally {
@@ -342,7 +350,11 @@ export function useOrganizationDashboard(orgId) {
 
   return {
     orgData,
-    members,
+    members: members.items || members,
+    membersPagination: {
+      currentPage: members.currentPage || 1,
+      totalPages: members.totalPages || 1,
+    },
     programs,
     posts,
     submittedProjects,

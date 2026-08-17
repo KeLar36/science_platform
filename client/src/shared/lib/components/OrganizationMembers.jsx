@@ -56,18 +56,26 @@ export default function OrganizationMembers({
     }
   };
 
+  const memberList = useMemo(() => {
+    if (Array.isArray(members)) return members;
+    if (members && Array.isArray(members.items)) return members.items;
+    return [];
+  }, [members]);
+
   const filteredMembers = useMemo(() => {
-    return members.filter((m) => {
+    return memberList.filter((m) => {
+      if (!m) return false;
+
       const matchesSearch =
         !search.trim() ||
-        m.name?.toLowerCase().includes(search.toLowerCase()) ||
-        m.email?.toLowerCase().includes(search.toLowerCase());
+        m.name?.toLowerCase().includes(search.toLowerCase().trim()) ||
+        m.email?.toLowerCase().includes(search.toLowerCase().trim());
 
       const matchesRole = roleFilter === "all" || m.role === roleFilter;
 
       return matchesSearch && matchesRole;
     });
-  }, [members, search, roleFilter]);
+  }, [memberList, search, roleFilter]);
 
   if (loading) return <Skeleton variant="rectangle" height="200px" />;
 
@@ -126,7 +134,7 @@ export default function OrganizationMembers({
               isOrgAdmin && memberId !== currentId && memberId !== ownerId;
 
             return (
-              <TableRow key={member._id}>
+              <TableRow key={memberId || member.email}>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar src={member.image} name={member.name} size="sm" />
