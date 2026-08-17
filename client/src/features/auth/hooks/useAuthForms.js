@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/shared/lib/context/AuthContext";
 import { authApi } from "@/features/auth/api/authApi";
-import toast from "react-hot-toast";
 
 export const useAuthForms = () => {
   const { token } = useParams();
@@ -46,12 +45,10 @@ export const useAuthForms = () => {
     try {
       await authApi.login(email, password);
       await checkAuth(true);
-      toast.success("Вітаємо у системі! 🟣");
       setTimeout(() => navigate("/profile"), 600);
     } catch (err) {
       const errorMsg = formatErrorMessage(err, "Невірний email або пароль");
       setError(errorMsg);
-      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -74,7 +71,6 @@ export const useAuthForms = () => {
         "Помилка реєстрації. Перевірте введені дані.",
       );
       setError(errorMsg);
-      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -88,14 +84,12 @@ export const useAuthForms = () => {
       await authApi.forgotPassword(email);
       const msg = "Інструкції щодо скидання пароля надіслано на вашу пошту! 📩";
       setSuccessMessage(msg);
-      toast.success(msg);
     } catch (err) {
       const errorMsg = formatErrorMessage(
         err,
         "Користувача з такою поштою не знайдено",
       );
       setError(errorMsg);
-      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -107,7 +101,6 @@ export const useAuthForms = () => {
     try {
       await authApi.resetPassword(token, password);
       setIsResetSuccess(true);
-      toast.success("Пароль успішно змінено!");
       setTimeout(() => {
         navigate("/login");
       }, 3000);
@@ -117,7 +110,6 @@ export const useAuthForms = () => {
         "Токен застарів або некоректний",
       );
       setError(errorMsg);
-      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
