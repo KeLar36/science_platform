@@ -45,8 +45,9 @@ export default function PostCard({ post }) {
             : ""
         }`}
       >
-        <div className="pb-0 space-y-4">
-          <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-bg-tertiary border border-border-color/40">
+        <div className="pb-0 space-y-3">
+          {/* Прев'ю картинки */}
+          <div className="relative aspect-video w-full overflow-hidden rounded-t-lg bg-bg-tertiary border-b border-border-color/40">
             {heroImage ? (
               <img
                 src={heroImage}
@@ -59,36 +60,41 @@ export default function PostCard({ post }) {
               </div>
             )}
 
-            <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 items-center">
-              {post.isFeatured && (
+            {/* Лейбл ТОП у лівому верхньому кутку */}
+            {post.isFeatured && (
+              <div className="absolute top-2 left-2 z-10">
                 <Badge
                   status="warning"
-                  className="backdrop-blur-md !bg-amber-500/90 !text-white border-none flex items-center gap-1 font-bold shadow-sm"
+                  className="backdrop-blur-md !bg-amber-500/95 !text-white border-none flex items-center gap-1 font-bold shadow-md text-[10px] px-2 py-0.5"
                 >
                   <Star className="w-3 h-3 fill-white" />
                   <span>Топ</span>
                 </Badge>
-              )}
+              </div>
+            )}
 
-              <Badge
-                status="default"
-                className="backdrop-blur-md !bg-bg-primary/80"
-              >
-                {post.category}
-              </Badge>
-
-              {post.domain && (
+            {/* Категорія у правому верхньому кутку */}
+            {post.category && (
+              <div className="absolute top-2 right-2 z-10">
                 <Badge
-                  status="success"
-                  className="backdrop-blur-md !bg-brand/80 text-white"
+                  status="default"
+                  className="backdrop-blur-md !bg-bg-primary/90 text-text-primary border border-border-color/30 text-[10px] px-2 py-0.5 shadow-md"
                 >
-                  {post.domain}
+                  {post.category}
                 </Badge>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-2 p-4 pt-0">
+          {/* Контентна частина */}
+          <div className="space-y-2 p-4 pt-1">
+            {/* Галузь знань винесена сюди — акуратним тегом над заголовком */}
+            {post.domain && (
+              <span className="inline-block text-[11px] font-semibold text-brand tracking-wide uppercase">
+                {post.domain}
+              </span>
+            )}
+
             <h3 className="block text-sm font-bold leading-snug tracking-tight text-text-primary group-hover:text-brand transition-colors line-clamp-2">
               {post.title}
             </h3>
@@ -99,7 +105,8 @@ export default function PostCard({ post }) {
           </div>
         </div>
 
-        <div className="p-3 border-t border-border-color/60 flex items-center justify-between text-[10px] font-medium text-text-muted">
+        {/* Футер картки */}
+        <div className="p-3 border-t border-border-color/60 flex items-center justify-between text-[10px] font-medium text-text-muted mt-auto">
           <div className="flex items-center gap-2.5">
             <Avatar
               src={post.authorId?.image}

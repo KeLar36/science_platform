@@ -63,10 +63,6 @@ export default function PostHeader({ post }) {
             {formattedDate}
           </span>
           <span className="flex items-center gap-1.5">
-            <Eye className="w-3.5 h-3.5" />
-            {post.views || 0} переглядів
-          </span>
-          <span className="flex items-center gap-1.5">
             <MessageSquare className="w-3.5 h-3.5" />
             {post.commentsCount || 0} коментарів
           </span>

@@ -267,20 +267,83 @@ class ProjectService {
     });
 
     try {
-      const matchedReviewer = await User.findOne({
+      // -----------------------------------------------------------------------
+      // ЕТАП 1: Фільтрація за бінарним предикатом (формування множини R*)
+      // -----------------------------------------------------------------------
+      const validReviewers = await User.find({
         role: "reviewer",
         organizationId: program.organizationId,
         isBanned: false,
         isReviewerActive: true,
         allowedDomains: newProject.domain,
         allowedTypes: program.type,
-      });
+      }).select("_id name lastAssignedAt updatedAt");
 
-      if (matchedReviewer) {
-        newProject.reviewerId = matchedReviewer._id;
+      if (validReviewers && validReviewers.length > 0) {
+        const reviewerIds = validReviewers.map((r) => r._id);
+
+        // ---------------------------------------------------------------------
+        // ЕТАП 2: Розрахунок операційного навантаження (kr) для кожного рецензента
+        // ---------------------------------------------------------------------
+        const activeCounts = await Project.aggregate([
+          {
+            $match: {
+              reviewerId: { $in: reviewerIds },
+              status: { $in: ["На розгляді", "На доопрацюванні"] },
+            },
+          },
+          {
+            $group: {
+              _id: "$reviewerId",
+              count: { $sum: 1 },
+            },
+          },
+        ]);
+
+        const loadMap = new Map();
+        activeCounts.forEach((item) => {
+          loadMap.set(item._id.toString(), item.count);
+        });
+
+        // ---------------------------------------------------------------------
+        // Балансування (min kr) + Порядок FIFO при рівності навантаження
+        // ---------------------------------------------------------------------
+        let selectedReviewer = validReviewers[0];
+        let minKr = loadMap.get(selectedReviewer._id.toString()) || 0;
+
+        for (const reviewer of validReviewers) {
+          const currentKr = loadMap.get(reviewer._id.toString()) || 0;
+
+          if (currentKr < minKr) {
+            minKr = currentKr;
+            selectedReviewer = reviewer;
+          } else if (currentKr === minKr) {
+            // FIFO: порівнюємо часові мітки останнього призначення
+            const timeA = new Date(
+              selectedReviewer.lastAssignedAt ||
+                selectedReviewer.updatedAt ||
+                0,
+            ).getTime();
+            const timeB = new Date(
+              reviewer.lastAssignedAt || reviewer.updatedAt || 0,
+            ).getTime();
+
+            if (timeB < timeA) {
+              selectedReviewer = reviewer;
+            }
+          }
+        }
+
+        newProject.reviewerId = selectedReviewer._id;
         newProject.reviewStatus = "В процесі";
+
+        // Фіксуємо часову мітку призначення для FIFO
+        await User.findByIdAndUpdate(selectedReviewer._id, {
+          $set: { lastAssignedAt: new Date() },
+        });
+
         console.log(
-          `Проєкт "${newProject.title}" автоматично закріплено за рецензентом: ${matchedReviewer.name}`,
+          `Проєкт "${newProject.title}" [галузь: ${newProject.domain}] призначено експерту: ${selectedReviewer.name} (kr = ${minKr})`,
         );
       } else {
         newProject.reviewStatus = "Не призначено";
@@ -289,7 +352,10 @@ class ProjectService {
         );
       }
     } catch (err) {
-      console.error("Помилка автоматичного підбору рецензента:", err);
+      console.error(
+        "Помилка автоматичного двоетапного підбору рецензента:",
+        err,
+      );
     }
 
     const savedProject = await newProject.save();
