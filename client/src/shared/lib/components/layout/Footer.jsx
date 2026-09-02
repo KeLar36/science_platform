@@ -7,6 +7,7 @@ import {
   Boxes,
   Shield,
   FileText,
+  Tag,
 } from "lucide-react";
 import Link from "@/shared/ui/Link";
 
@@ -152,13 +153,23 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t border-border-color flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex flex-col sm:flex-row items-center gap-4 text-xs font-semibold text-text-muted text-center md:text-left">
+          <div className="flex flex-col sm:flex-row items-center gap-3 text-xs font-semibold text-text-muted text-center md:text-left">
             <span>&copy; {currentYear} Science Platform</span>
-            <div className="flex items-center gap-2 px-3 py-1 bg-bg-secondary border border-border-color rounded-lg shadow-sm">
-              <Boxes className="w-3.5 h-3.5 text-brand" />
-              <span className="text-[9px] text-text-primary font-mono font-bold uppercase tracking-wider">
-                Магістерська Робота
-              </span>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1 bg-bg-secondary border border-border-color rounded-lg shadow-sm">
+                <Boxes className="w-3.5 h-3.5 text-brand" />
+                <span className="text-[9px] text-text-primary font-mono font-bold uppercase tracking-wider">
+                  Магістерська Робота
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-brand/10 border border-brand/20 rounded-lg shadow-sm">
+                <Tag className="w-3 h-3 text-brand" />
+                <span className="text-[9px] text-brand font-mono font-extrabold tracking-wider">
+                  v3.0.0
+                </span>
+              </div>
             </div>
           </div>
 
