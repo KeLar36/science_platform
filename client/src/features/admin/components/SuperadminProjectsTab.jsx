@@ -273,7 +273,6 @@ export default function SuperadminProjectsTab() {
                     </div>
                   </TableCell>
 
-                  {/* Файл / Дії */}
                   <TableCell className="px-8 py-5 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       {fileUrl ? (

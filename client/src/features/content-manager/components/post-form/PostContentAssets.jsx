@@ -9,7 +9,7 @@ export default function PostContentAssets({
   setTitle,
   category,
   setCategory,
-  file, // Тепер це буде масив файлів: []
+  file,
   setFile,
   existingCover,
 }) {

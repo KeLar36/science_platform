@@ -75,7 +75,6 @@ export default function UploadNewVersionModal({
           </Alert>
         )}
 
-        {/* Зауваження рецензента для контексту */}
         {project.reviewerComments && (
           <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 text-xs">
             <span className="font-mono font-bold text-amber-600 uppercase text-[10px]">
@@ -87,7 +86,6 @@ export default function UploadNewVersionModal({
           </div>
         )}
 
-        {/* Поле вибору файлу */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-mono font-bold uppercase text-text-muted">
             Оновлений файл праці (до 25 MB) *
@@ -112,7 +110,6 @@ export default function UploadNewVersionModal({
           </div>
         </div>
 
-        {/* Коментар автора до нової версії */}
         <div>
           <TextArea
             label="Коментар до виправлень (що було змінено)"
@@ -124,7 +121,6 @@ export default function UploadNewVersionModal({
           />
         </div>
 
-        {/* Кнопки */}
         <div className="flex justify-end gap-3 pt-4 border-t border-border-color">
           <Button
             variant="outline"

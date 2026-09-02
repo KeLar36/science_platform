@@ -7,8 +7,8 @@ const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
-const initSystemOrg = require("./config/initSystemOrg");
 const errorHandler = require("./middleware/errorHandler");
+const initDeadlineScheduler = require("./cron/archiveExpiredPrograms");
 
 const PORT = process.env.PORT || 5000;
 const app = express();
@@ -83,6 +83,7 @@ app.use("/api/posts", require("./routes/postsRoutes"));
 app.use("/api/comments", require("./routes/commentRoutes"));
 app.use("/api/organizations", require("./routes/organizationRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
+app.use("/api/admin", require("./routes/superadminRoutes"));
 app.get("/", (req, res) => {
   res.send("Science Platform API is running...");
 });
@@ -92,15 +93,6 @@ app.use(errorHandler);
 const startServer = async () => {
   try {
     await connectDB();
-
-    try {
-      await initSystemOrg();
-    } catch (initErr) {
-      console.error(
-        "Ініціалізація системної організації пропущена:",
-        initErr.message,
-      );
-    }
 
     app.listen(PORT, () => {
       console.log(`Local server running on http://localhost:${PORT}`);
@@ -112,5 +104,6 @@ const startServer = async () => {
 };
 
 startServer();
+initDeadlineScheduler();
 
 module.exports = app;

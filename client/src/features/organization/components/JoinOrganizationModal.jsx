@@ -133,7 +133,6 @@ export default function JoinOrganizationModal({ isOpen, onClose, onSuccess }) {
                           {org.name}
                         </h4>
 
-                        {/* Галочка верифікованої організації */}
                         {org.isVerified && (
                           <CheckCircle2
                             size={13}

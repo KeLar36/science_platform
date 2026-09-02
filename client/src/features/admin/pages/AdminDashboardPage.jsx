@@ -5,6 +5,7 @@ import Breadcrumbs from "@/shared/ui/Breadcrumbs";
 import Tabs from "@/shared/ui/Tabs";
 import Card from "@/shared/ui/Card";
 import { useAuth } from "@/shared/lib/hooks/useAuth";
+import { useAdminData } from "@/features/admin/hooks/useAdminData";
 import {
   ShieldAlert,
   Sparkles,
@@ -15,9 +16,9 @@ import {
   FileText,
   Users,
   UserCheck,
-  AlertTriangle,
 } from "lucide-react";
 
+import SuperadminOverviewTab from "@/features/admin/components/SuperadminOverviewTab";
 import SuperadminDangerZoneTab from "@/features/admin/components/SuperadminDangerZoneTab";
 import SuperadminProgramsTab from "@/features/admin/components/SuperadminProgramsTab";
 import SuperadminOrganizationsTab from "@/features/admin/components/SuperadminOrganizationsTab";
@@ -28,6 +29,8 @@ import SuperadminReviewersTab from "@/features/admin/components/SuperadminReview
 export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+
+  const { analytics, fetchAnalytics, loading } = useAdminData();
 
   const handleCreateProgram = () => {
     console.log("Відкрити модалку створення програми");
@@ -74,7 +77,7 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-purple-600 selection:text-white">
       <Navbar />
 
-      <main className="flex-grow pt-36 pb-24 px-3 Lg:px-0 max-w-7xl mx-auto w-full space-y-6 text-left">
+      <main className="flex-grow pt-36 pb-24 px-3 lg:px-0 max-w-7xl mx-auto w-full space-y-6 text-left">
         <Breadcrumbs items={breadcrumbItems} />
 
         <div className="p-6 bg-bg-secondary/60 border border-border-color rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -105,24 +108,14 @@ export default function AdminDashboardPage() {
         <Tabs tabs={adminTabs} activeTab={activeTab} onChange={setActiveTab} />
 
         {activeTab === "overview" && (
-          <div className="space-y-4">
-            <Card className="p-8 text-center space-y-3 bg-bg-secondary/40 border-dashed">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto text-purple-600">
-                <LayoutDashboard size={24} />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-bold text-sm text-text-primary">
-                  Центр управління Science Platform
-                </h3>
-                <p className="text-xs text-text-muted max-w-md mx-auto font-mono">
-                  Адмін-панель готова до роботи. Обирай потрібну вкладку зверху,
-                  щоб завантажувати та редагувати дані.
-                </p>
-              </div>
-            </Card>
-          </div>
+          <SuperadminOverviewTab
+            analytics={analytics}
+            loading={loading}
+            onFetchAnalytics={fetchAnalytics}
+            onTabChange={setActiveTab}
+            onCreateProgram={handleCreateProgram}
+          />
         )}
-
         {activeTab === "programs" && (
           <SuperadminProgramsTab
             onCreateClick={handleCreateProgram}

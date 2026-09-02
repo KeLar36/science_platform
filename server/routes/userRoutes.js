@@ -3,7 +3,6 @@ const router = express.Router();
 const userController = require("../controllers/userController");
 const { verifyToken, checkRole, canManageUser } = require("../middleware/auth");
 const upload = require("../middleware/upload");
-
 const adminAccess = checkRole(["admin", "superadmin"]);
 
 router.get("/me", verifyToken, userController.getMe);
@@ -13,7 +12,6 @@ router.patch(
   upload.single("image"),
   userController.updateProfile,
 );
-
 router.get("/bookmarks/all", verifyToken, userController.getBookmarks);
 router.get("/bookmarks/check/:id", verifyToken, userController.checkBookmark);
 router.get("/saved-posts", verifyToken, userController.getSavedPosts);
@@ -23,8 +21,7 @@ router.post(
   userController.toggleBookmark,
 );
 
-router.get("/community", userController.getCommunity);
-
+router.get("/community", userController.getCommunity);\
 router.get("/all", verifyToken, adminAccess, userController.getAll);
 router.get("/count", verifyToken, adminAccess, userController.getCount);
 

@@ -78,17 +78,14 @@ export default function ContentManagerPage() {
     setPage(1);
   };
 
-  // Редагування: Перехід на нову сторінку
   const handleEdit = (id) => {
     navigate(`/content-manager/posts/edit/${id}`);
   };
 
-  // Створення: Перехід на нову сторінку
   const handleAddPost = () => {
     navigate("/content-manager/posts/create");
   };
 
-  // Видалення допису
   const handleDelete = async (id) => {
     if (
       !window.confirm(
@@ -143,7 +140,6 @@ export default function ContentManagerPage() {
         <div className="max-w-6xl mx-auto py-6 px-3 lg:px-0 space-y-6 bg-bg-primary text-text-primary min-h-screen text-left">
           <Breadcrumbs items={breadcrumbItems} />
 
-          {/* Авто-алерт сповіщень */}
           {feedback.type && (
             <Alert
               variant={feedback.type}

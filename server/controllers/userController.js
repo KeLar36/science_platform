@@ -231,7 +231,6 @@ class UserController {
       if (index === -1) {
         user.bookmarks.push(postId);
       } else {
-        // Якщо є - видаляємо
         user.bookmarks.splice(index, 1);
       }
 

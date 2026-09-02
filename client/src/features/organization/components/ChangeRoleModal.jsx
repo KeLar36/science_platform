@@ -149,7 +149,6 @@ export default function ChangeRoleModal({
 
         {selectedRole === "reviewer" && (
           <div className="space-y-4 pt-2 border-t border-border-color animate-in fade-in duration-200">
-            {/* Вибір наукового ступеня */}
             <div>
               <Select
                 label="Науковий ступінь / Вчене звання"

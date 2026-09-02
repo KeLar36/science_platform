@@ -255,6 +255,18 @@ class ProjectService {
       throw error;
     }
 
+    const now = new Date();
+    if (
+      !program.active ||
+      (program.deadline && new Date(program.deadline) < now)
+    ) {
+      const error = new Error(
+        "Прийом заявок за цією програмою вже завершено (дедлайн минув або програма в архіві)",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
     const newProject = new Project({
       title: projectData.title,
       description: projectData.description,
@@ -305,9 +317,6 @@ class ProjectService {
           loadMap.set(item._id.toString(), item.count);
         });
 
-        // ---------------------------------------------------------------------
-        // Балансування (min kr) + Порядок FIFO при рівності навантаження
-        // ---------------------------------------------------------------------
         let selectedReviewer = validReviewers[0];
         let minKr = loadMap.get(selectedReviewer._id.toString()) || 0;
 
@@ -337,7 +346,6 @@ class ProjectService {
         newProject.reviewerId = selectedReviewer._id;
         newProject.reviewStatus = "В процесі";
 
-        // Фіксуємо часову мітку призначення для FIFO
         await User.findByIdAndUpdate(selectedReviewer._id, {
           $set: { lastAssignedAt: new Date() },
         });
@@ -429,7 +437,6 @@ class ProjectService {
         oldProject.reviewerId.toString() !== updateData.reviewerId.toString())
     ) {
       try {
-        // Рецензенту
         await notificationService.createNotification({
           recipientId: updateData.reviewerId,
           title: "Призначено новий проєкт",

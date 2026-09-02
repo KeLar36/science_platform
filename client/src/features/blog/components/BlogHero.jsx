@@ -18,9 +18,8 @@ export default function BlogHero() {
 
     const handleType = () => {
       if (!isDeleting) {
-        // Режим друку тексту
         setCurrentText(activeWord.substring(0, currentText.length + 1));
-        setTypingSpeed(100); // швидкість друку
+        setTypingSpeed(100);
 
         if (currentText === activeWord) {
           setTypingSpeed(2000);
@@ -28,8 +27,7 @@ export default function BlogHero() {
         }
       } else {
         setCurrentText(activeWord.substring(0, currentText.length - 1));
-        setTypingSpeed(50); // швидкість стирання значно вища
-
+        setTypingSpeed(50);
         if (currentText === "") {
           setIsDeleting(false);
           setCurrentWordIdx((prev) => (prev + 1) % WORDS.length);

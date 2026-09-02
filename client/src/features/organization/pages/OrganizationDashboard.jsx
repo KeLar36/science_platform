@@ -116,9 +116,7 @@ export default function OrganizationDashboard() {
           { id: "requests", label: "Заявки на вступ" },
           {
             id: "create-program",
-            label: editingProgram
-              ? "✏️ Редагування програми"
-              : "+ Нова програма",
+            label: editingProgram ? "Редагування програми" : "+ Нова програма",
           },
         ]
       : []),

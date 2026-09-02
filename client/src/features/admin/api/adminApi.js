@@ -62,8 +62,8 @@ export const adminApi = {
     return res.data;
   },
 
-  getAllPrograms: async (params) => {
-    const res = await axiosInstance.get("/programs", { params });
+  getPrograms: async (params = {}) => {
+    const res = await axiosInstance.get("/admin/programs", { params });
     return res.data;
   },
   createProgram: async (programData) => {
@@ -86,10 +86,6 @@ export const adminApi = {
     );
     return res.data;
   },
-  deleteProgram: async (programId) => {
-    const res = await axiosInstance.delete(`/programs/${programId}`);
-    return res.data;
-  },
 
   getAllPosts: async () => {
     const res = await axiosInstance.get("/posts");
@@ -97,6 +93,15 @@ export const adminApi = {
   },
   deletePost: async (postId) => {
     const res = await axiosInstance.delete(`/posts/${postId}`);
+    return res.data;
+  },
+  getSuperadminAnalytics: async () => {
+    const res = await axiosInstance.get("/admin/analytics");
+    return res.data;
+  },
+
+  sendBroadcast: async (payload) => {
+    const res = await axiosInstance.post("/admin/broadcast", payload);
     return res.data;
   },
 };

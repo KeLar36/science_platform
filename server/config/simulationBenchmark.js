@@ -2,13 +2,11 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const { performance } = require("perf_hooks");
 
-// 1. Завантажуємо Mongoose моделі
 const User = require("../models/User");
 const Program = require("../models/Program");
 const Project = require("../models/Project");
 const Organization = require("../models/Organization");
 
-// 2. Завантажуємо сервіси
 const projectService = require("../services/projectService");
 const userService = require("../services/userService");
 
@@ -16,23 +14,20 @@ const MONGO_URI =
   process.env.MONGO_URI ||
   "mongodb://localhost:27017/science_platform_benchmark";
 
-// Довідникові константи з вашої системи
 const TEST_DOMAIN = "Математика та комп'ютерні науки";
 const TEST_PROGRAM_TYPE = "Стаття";
 
 async function runSafeBenchmark() {
   try {
-    console.log("🚀 [1/5] Підключення до бази даних...");
+    console.log("[1/5] Підключення до бази даних...");
     await mongoose.connect(MONGO_URI);
 
-    // БЕЗПЕЧНЕ ОЧИЩЕННЯ: Видаляємо ТІЛЬКИ попередні тестові проєкти бенчмарку
     await Project.deleteMany({ title: { $regex: /^Бенчмарк-Тест/ } });
 
     console.log(
-      "⚙️  [2/5] Перевірка тестової інфраструктури (суперадміни та існуючі користувачі НЕ видаляються)...",
+      "[2/5] Перевірка тестової інфраструктури (суперадміни та існуючі користувачі НЕ видаляються)...",
     );
 
-    // Пошук або використання будь-якого наявного акаунта для прив'язки
     let anyUser = await User.findOne({ isAnonymized: false });
     if (!anyUser) {
       console.log("⚙️  Акаунтів не знайдено, створюємо тестового автора...");
@@ -45,7 +40,6 @@ async function runSafeBenchmark() {
       await anyUser.save();
     }
 
-    // 1. Шукаємо або створюємо ізольовану тестову організацію
     let org = await Organization.findOne({ name: "Бенчмарк Тестовий НДІ" });
     if (!org) {
       org = new Organization({
@@ -60,7 +54,6 @@ async function runSafeBenchmark() {
       await org.save();
     }
 
-    // 2. Шукаємо або створюємо тестову програму "Стаття"
     let program = await Program.findOne({
       title: "Бенчмарк Журнал з комп'ютерних наук",
     });
@@ -78,7 +71,6 @@ async function runSafeBenchmark() {
       await program.save();
     }
 
-    // 3. Перевіряємо та підганяємо пулу у 50 бенчмарк-рецензентів
     let benchmarkReviewers = await User.find({
       email: { $regex: /^benchmark_reviewer_/ },
     });
@@ -86,7 +78,7 @@ async function runSafeBenchmark() {
     if (benchmarkReviewers.length < 50) {
       const needed = 50 - benchmarkReviewers.length;
       console.log(
-        `⚙️  Створюємо ${needed} ізольованих рецензентів для бенчмарку...`,
+        `Створюємо ${needed} ізольованих рецензентів для бенчмарку...`,
       );
 
       const newReviewers = [];
@@ -111,12 +103,12 @@ async function runSafeBenchmark() {
     }
 
     console.log(
-      `✅ Готово: Використовується ${benchmarkReviewers.length} рецензентів у галузі "${TEST_DOMAIN}".`,
+      `Готово: Використовується ${benchmarkReviewers.length} рецензентів у галузі "${TEST_DOMAIN}".`,
     );
 
     // --------------------------------------------------------------------------
     console.log(
-      "\n🧪 [3/5] ПОЧАТОК ЕКСПЕРИМЕНТУ: Послідовне створення та відбір для 1000 праць...",
+      "\n [3/5] ПОЧАТОК ЕКСПЕРИМЕНТУ: Послідовне створення та відбір для 1000 праць...",
     );
     const executionTimes = [];
     const createdProjectIds = [];
@@ -138,7 +130,6 @@ async function runSafeBenchmark() {
 
       const startTime = performance.now();
 
-      // Реальний запуск двостадійного відбору
       const createdProject = await projectService.create(projectData);
 
       const endTime = performance.now();
@@ -147,14 +138,11 @@ async function runSafeBenchmark() {
       createdProjectIds.push(createdProject._id);
     }
 
-    // --------------------------------------------------------------------------
-    // ОБЧИСЛЕННЯ НАУКОВИХ МЕТРИК
     const totalTime = executionTimes.reduce((a, b) => a + b, 0);
     const avgTime = totalTime / executionTimes.length;
     const minTime = Math.min(...executionTimes);
     const maxTime = Math.max(...executionTimes);
 
-    // Стандартне відхилення (σ)
     const variance =
       executionTimes.reduce((acc, t) => acc + Math.pow(t - avgTime, 2), 0) /
       executionTimes.length;
@@ -162,14 +150,13 @@ async function runSafeBenchmark() {
 
     // --------------------------------------------------------------------------
     console.log(
-      "\n⚡ [4/5] ТЕСТУВАННЯ МЕХАНІЗМУ КАСКАДНОГО ОЧИЩЕННЯ (updateBanStatus)...",
+      "\n [4/5] ТЕСТУВАННЯ МЕХАНІЗМУ КАСКАДНОГО ОЧИЩЕННЯ (updateBanStatus)...",
     );
 
     const targetReviewers = benchmarkReviewers.slice(0, 5);
 
     const cascadeStartTime = performance.now();
 
-    // Симулюємо блокування 5 рецензентів та каскадне повернення їхніх робіт
     for (const rev of targetReviewers) {
       await userService.updateBanStatus(rev._id, true);
     }
@@ -184,7 +171,7 @@ async function runSafeBenchmark() {
     });
 
     console.log(
-      "\n================ 📊 ОТРИМАНІ МЕТРИКИ ДЛЯ СТАТТІ ================",
+      "\n================  ОТРИМАНІ МЕТРИКИ ДЛЯ СТАТТІ ================",
     );
     console.log(`• Обсяг тестової вибірки: 10000 наукових праць`);
     console.log(`• Галузь / Тип: "${TEST_DOMAIN}" / "${TEST_PROGRAM_TYPE}"`);
@@ -209,21 +196,17 @@ async function runSafeBenchmark() {
     );
     console.log(`• Кількість повернених у чергу робіт: ${unassignedCount} од.`);
 
-    // Відновлюємо розбанений статус для бенчмарк-рецензентів
     for (const rev of targetReviewers) {
       await userService.updateBanStatus(rev._id, false);
     }
 
-    // Прибираємо за собою створені 1000 тестових робіт
     await Project.deleteMany({ title: { $regex: /^Бенчмарк-Тест/ } });
-    console.log(
-      "\n🧹 [5/5] Тимчасові тестові проєкти прибрано. База в безпеці!",
-    );
+    console.log("\n [5/5] Тимчасові тестові проєкти прибрано. База в безпеці!");
   } catch (error) {
-    console.error("❌ Помилка під час бенчмарку:", error);
+    console.error(" Помилка під час бенчмарку:", error);
   } finally {
     await mongoose.disconnect();
-    console.log("✅ Експеримент успішно завершено.");
+    console.log(" Експеримент успішно завершено.");
   }
 }
 

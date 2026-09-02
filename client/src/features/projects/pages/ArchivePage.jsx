@@ -20,7 +20,7 @@ export default function ArchivePage() {
     updateFilter,
     handleResetFilters,
     pagination,
-  } = useProjects({}, 8, true); // 👈 isArchiveMode = true
+  } = useProjects({}, 8, true);
 
   const [selectedProject, setSelectedProject] = useState(null);
 

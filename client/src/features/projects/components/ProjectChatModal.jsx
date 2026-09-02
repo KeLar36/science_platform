@@ -52,7 +52,6 @@ export default function ProjectChatModal({ project, onClose }) {
           </div>
         )}
 
-        {/* Список повідомлень */}
         <div className="flex-1 overflow-y-auto space-y-3 p-3 bg-bg-secondary rounded-lg border border-border-color">
           {loading ? (
             <div className="text-center py-8 text-xs font-mono text-text-muted">

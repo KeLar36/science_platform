@@ -160,7 +160,6 @@ export default function OrganizationJoinRequests({
             })}
           </Table>
 
-          {/* Пагінація */}
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

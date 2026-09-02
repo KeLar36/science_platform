@@ -2,11 +2,11 @@ const mongoose = require("mongoose");
 
 const connectDB = async () => {
   try {
-    console.log("⏳ Connecting to MongoDB Atlas...");
+    console.log("Connecting to MongoDB Atlas...");
     const conn = await mongoose.connect(process.env.MONGO_URI);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (err) {
-    console.error(`❌ DB Connection Error: ${err.message}`);
+    console.error(`DB Connection Error: ${err.message}`);
     process.exit(1);
   }
 };

@@ -16,7 +16,7 @@ export default function ProgramSpecification({ program }) {
 
       {program.type === "Грант" && program.amount && (
         <div>
-          💰 Обсяг фінансування (Бюджет):{" "}
+          Обсяг фінансування (Бюджет):{" "}
           <span className="text-amber-500 font-black">{program.amount}</span>
         </div>
       )}
@@ -25,14 +25,14 @@ export default function ProgramSpecification({ program }) {
         <>
           {program.issn && (
             <div>
-              🆔 Міжнародний індекс ISSN:{" "}
+              Міжнародний індекс ISSN:{" "}
               <span className="text-text-primary font-bold">
                 {program.issn}
               </span>
             </div>
           )}
           <div>
-            📈 Метрика Impact Factor:{" "}
+            Метрика Impact Factor:{" "}
             <span className="text-emerald-500 font-black">
               {program.impactFactor || "0"}
             </span>
@@ -42,7 +42,7 @@ export default function ProgramSpecification({ program }) {
 
       {program.organizer && (
         <div>
-          🏛️ Головний організатор / Комітет:{" "}
+          Головний організатор / Комітет:{" "}
           <span className="text-text-secondary">{program.organizer}</span>
         </div>
       )}

@@ -257,7 +257,6 @@ class ProjectController {
     }
   }
 
-  // Робоча область: Рецензент
   async getReviewerQueue(req, res, next) {
     try {
       const page = parseInt(req.query.page) || 1;

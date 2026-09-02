@@ -397,8 +397,6 @@ class OrganizationController {
     }
   }
 
-  // В organizationController.js:
-
   toggleVerified = async (req, res, next) => {
     try {
       const updatedOrg = await organizationService.toggleVerified(

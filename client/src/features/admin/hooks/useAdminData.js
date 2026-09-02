@@ -5,10 +5,27 @@ export function useAdminData() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [programs, setPrograms] = useState([]);
+  const [programsData, setProgramsData] = useState({
+    programs: [],
+    pagination: { currentPage: 1, totalPages: 1, totalItems: 0 },
+  });
   const [organizations, setOrganizations] = useState([]);
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
+
+  const [analytics, setAnalytics] = useState({
+    kpis: {
+      totalUsers: 0,
+      bannedUsers: 0,
+      pendingOrganizations: 0,
+      approvedOrganizations: 0,
+      activePrograms: 0,
+      totalProjects: 0,
+      unassignedProjects: 0,
+    },
+    domainDistribution: [],
+    recentProjects: [],
+  });
 
   const [programsPagination, setProgramsPagination] = useState({
     currentPage: 1,
@@ -34,34 +51,42 @@ export function useAdminData() {
     totalItems: 0,
   });
 
+  const fetchAnalytics = useCallback(async () => {
+    setError(null);
+    try {
+      const data = await adminApi.getSuperadminAnalytics();
+      setAnalytics(data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Помилка завантаження аналітики");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   /* ------------------- PROGRAM METHODS ------------------- */
-  const fetchPrograms = useCallback(
-    async (page = 1, search = "", type = "") => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await adminApi.getAllPrograms({ page, search, type });
-        setPrograms(data.programs || data.items || []);
-        setProgramsPagination({
-          currentPage: data.currentPage || page,
-          totalPages: data.totalPages || 1,
-          totalItems: data.totalItems || 0,
-        });
-      } catch (err) {
-        const msg =
-          err.response?.data?.message || "Помилка завантаження програм";
-        setError(msg);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
+  const fetchPrograms = useCallback(async (params = {}) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getPrograms(params);
+      setProgramsData({
+        programs: res.programs || [],
+        pagination: res.pagination || {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 0,
+        },
+      });
+    } catch (err) {
+      console.error("Помилка завантаження програм:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const toggleProgramStatus = async (programId) => {
     try {
       const res = await adminApi.toggleProgramStatus(programId);
-      setPrograms((prev) =>
+      setProgramsData((prev) =>
         prev.map((p) =>
           p._id === programId
             ? { ...p, active: res.program?.active ?? !p.active }
@@ -72,17 +97,6 @@ export function useAdminData() {
     } catch (err) {
       const msg =
         err.response?.data?.message || "Помилка зміни статусу програми";
-      return { success: false, message: msg };
-    }
-  };
-
-  const deleteProgram = async (programId) => {
-    try {
-      const res = await adminApi.deleteProgram(programId);
-      setPrograms((prev) => prev.filter((p) => p._id !== programId));
-      return { success: true, message: res.message };
-    } catch (err) {
-      const msg = err.response?.data?.message || "Помилка видалення програми";
       return { success: false, message: msg };
     }
   };
@@ -267,13 +281,14 @@ export function useAdminData() {
     setLoading,
     error,
     setError,
+    analytics,
+    fetchAnalytics,
     // Programs
-    programs,
+    programs: programsData.programs,
     pagination: programsPagination,
     programsPagination,
     fetchPrograms,
     toggleProgramStatus,
-    deleteProgram,
     forceCleanupProgram,
     // Organizations
     organizations,

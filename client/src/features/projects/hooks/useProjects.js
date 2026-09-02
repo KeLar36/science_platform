@@ -55,7 +55,6 @@ export function useProjects(
             items = items.filter((p) => p.domain === currentFilters.domain);
           }
 
-          // 3. Фільтрація за типом програми / матеріалу (Журнал, Стаття, Датасет)
           if (currentFilters.type && currentFilters.type !== "Всі типи") {
             items = items.filter(
               (p) =>

@@ -81,7 +81,6 @@ export function useReviewerQueue(initialFilters = {}, limit = 8) {
         reviewData,
       );
 
-      // Оновлюємо стан списку
       setProjects((prev) =>
         prev.map((p) => (p._id === projectId ? updatedProject : p)),
       );

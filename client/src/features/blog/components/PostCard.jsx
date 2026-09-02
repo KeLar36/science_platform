@@ -46,7 +46,6 @@ export default function PostCard({ post }) {
         }`}
       >
         <div className="pb-0 space-y-3">
-          {/* Прев'ю картинки */}
           <div className="relative aspect-video w-full overflow-hidden rounded-t-lg bg-bg-tertiary border-b border-border-color/40">
             {heroImage ? (
               <img
@@ -60,7 +59,6 @@ export default function PostCard({ post }) {
               </div>
             )}
 
-            {/* Лейбл ТОП у лівому верхньому кутку */}
             {post.isFeatured && (
               <div className="absolute top-2 left-2 z-10">
                 <Badge
@@ -73,7 +71,6 @@ export default function PostCard({ post }) {
               </div>
             )}
 
-            {/* Категорія у правому верхньому кутку */}
             {post.category && (
               <div className="absolute top-2 right-2 z-10">
                 <Badge
@@ -86,9 +83,7 @@ export default function PostCard({ post }) {
             )}
           </div>
 
-          {/* Контентна частина */}
           <div className="space-y-2 p-4 pt-1">
-            {/* Галузь знань винесена сюди — акуратним тегом над заголовком */}
             {post.domain && (
               <span className="inline-block text-[11px] font-semibold text-brand tracking-wide uppercase">
                 {post.domain}
@@ -105,7 +100,6 @@ export default function PostCard({ post }) {
           </div>
         </div>
 
-        {/* Футер картки */}
         <div className="p-3 border-t border-border-color/60 flex items-center justify-between text-[10px] font-medium text-text-muted mt-auto">
           <div className="flex items-center gap-2.5">
             <Avatar

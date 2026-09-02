@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Organization = require("../models/Organization");
+const Notification = require("../models/Notification");
 const projectService = require("./projectService");
-const notificationService = require("./notificationService");
 
 class ProgramService {
   getProgramModel() {
@@ -14,6 +14,10 @@ class ProgramService {
 
     if (filters.active !== undefined) {
       query.active = filters.active === true || filters.active === "true";
+    }
+
+    if (query.active === true) {
+      query.deadline = { $gte: new Date() };
     }
 
     if (filters.type && filters.type !== "Всі") {
@@ -32,24 +36,38 @@ class ProgramService {
     return query;
   }
 
+  async #processInBatches(items, batchSize, fn) {
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      await Promise.all(batch.map(fn));
+    }
+  }
+
   async getAll(queryFilters = {}, page = 1, limit = 8) {
     const ProgramModel = this.getProgramModel();
     const query = this.#buildFilterQuery(queryFilters);
-    const skip = (page - 1) * limit;
 
-    const programs = await ProgramModel.find(query)
-      .populate("organizationId", "name logo isSystem")
-      .sort({ isFeatured: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 8);
+    const skip = (pageNum - 1) * limitNum;
 
-    const total = await ProgramModel.countDocuments(query);
-    const totalPages = Math.ceil(total / limit);
+    // Паралельне виконання підрахунку та вибірки
+    const [programs, total] = await Promise.all([
+      ProgramModel.find(query)
+        .populate("organizationId", "name logo isSystem")
+        .sort({ isFeatured: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      ProgramModel.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum) || 1;
 
     return {
       programs,
       totalPages,
-      currentPage: Number(page),
+      currentPage: pageNum,
       totalItems: total,
     };
   }
@@ -57,21 +75,27 @@ class ProgramService {
   async getArchive(queryFilters = {}, page = 1, limit = 8) {
     const ProgramModel = this.getProgramModel();
     const query = this.#buildFilterQuery({ ...queryFilters, active: false });
-    const skip = (page - 1) * limit;
 
-    const archived = await ProgramModel.find(query)
-      .populate("organizationId", "name logo")
-      .sort({ updatedAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 8);
+    const skip = (pageNum - 1) * limitNum;
 
-    const total = await ProgramModel.countDocuments(query);
-    const totalPages = Math.ceil(total / limit);
+    const [archived, total] = await Promise.all([
+      ProgramModel.find(query)
+        .populate("organizationId", "name logo")
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      ProgramModel.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum) || 1;
 
     return {
       archived,
       totalPages,
-      currentPage: Number(page),
+      currentPage: pageNum,
       totalItems: total,
     };
   }
@@ -128,15 +152,16 @@ class ProgramService {
           isReviewerActive: true,
         }).select("_id");
 
-        for (const reviewer of reviewers) {
-          await notificationService.createNotification({
-            recipientId: reviewer._id,
+        if (reviewers.length > 0) {
+          const notifications = reviewers.map((r) => ({
+            recipientId: r._id,
             title: "Нова програма в установі",
             message: `Ваша установа відкрила нову програму "${savedProgram.title}" (${type}). Будьте готові до рецензування майбутніх робіт.`,
             type: "SYSTEM_INFO",
             link: `/programs/${savedProgram._id}`,
-            sendEmail: false,
-          });
+          }));
+
+          await Notification.insertMany(notifications);
         }
       } catch (notifErr) {
         console.error(
@@ -160,7 +185,7 @@ class ProgramService {
     }
 
     if (status !== undefined) {
-      program.active = status === "active";
+      program.active = status === "active" || status === true;
     } else {
       program.active = !program.active;
     }
@@ -178,16 +203,17 @@ class ProgramService {
         ),
       ];
 
-      const statusText = program.active ? "активовано" : "деактивовано";
-      for (const authorId of authorIds) {
-        await notificationService.createNotification({
+      if (authorIds.length > 0) {
+        const statusText = program.active ? "активовано" : "деактивовано";
+        const notifications = authorIds.map((authorId) => ({
           recipientId: authorId,
           title: "Зміна статусу програми",
           message: `Статус програми "${program.title}" змінено на: ${statusText}.`,
           type: "SYSTEM_INFO",
           link: `/programs/${program._id}`,
-          sendEmail: false,
-        });
+        }));
+
+        await Notification.insertMany(notifications);
       }
     } catch (error) {
       console.error(
@@ -225,7 +251,6 @@ class ProgramService {
     }
 
     await projectService.handleProgramDeletion([id]);
-
     await ProgramModel.findByIdAndDelete(id);
     return program;
   }
@@ -253,15 +278,16 @@ class ProgramService {
         ),
       ];
 
-      for (const authorId of authorIds) {
-        await notificationService.createNotification({
+      if (authorIds.length > 0) {
+        const notifications = authorIds.map((authorId) => ({
           recipientId: authorId,
           title: "Завершення дедлайну програми",
           message: `Дедлайн прийому заявок для програми "${program.title}" завершився. Прийом заявок закрито.`,
           type: "SYSTEM_INFO",
           link: `/programs/${program._id}`,
-          sendEmail: true,
-        });
+        }));
+
+        await Notification.insertMany(notifications);
       }
     } catch (error) {
       console.error("Помилка при надсиланні сповіщень про дедлайн:", error);
@@ -273,14 +299,10 @@ class ProgramService {
     }).select("_id");
 
     if (trashProjects.length > 0) {
-      for (const proj of trashProjects) {
-        await projectService.clearRejectedProjectFiles(proj._id);
-      }
+      await this.#processInBatches(trashProjects, 5, (proj) =>
+        projectService.clearRejectedProjectFiles(proj._id),
+      );
     }
-
-    console.log(
-      `Дедлайн програми ${programId}. Файли відхилених робіт видалено з Cloudinary. Картки та активні проєкти збережено.`,
-    );
   }
 
   async finalCleanupAndClose(programId) {
@@ -297,9 +319,9 @@ class ProgramService {
     }).select("_id authorId");
 
     if (nonApprovedProjects.length > 0) {
-      for (const proj of nonApprovedProjects) {
-        await projectService.clearRejectedProjectFiles(proj._id);
-      }
+      await this.#processInBatches(nonApprovedProjects, 5, (proj) =>
+        projectService.clearRejectedProjectFiles(proj._id),
+      );
     }
 
     program.active = false;
@@ -317,15 +339,16 @@ class ProgramService {
         ),
       ];
 
-      for (const authorId of authorIds) {
-        await notificationService.createNotification({
+      if (authorIds.length > 0) {
+        const notifications = authorIds.map((authorId) => ({
           recipientId: authorId,
           title: "Програму закрито",
           message: `Програму "${program.title}" закрито адміністратором.`,
           type: "SYSTEM_INFO",
           link: `/programs/${program._id}`,
-          sendEmail: true,
-        });
+        }));
+
+        await Notification.insertMany(notifications);
       }
     } catch (error) {
       console.error(
@@ -333,10 +356,6 @@ class ProgramService {
         error,
       );
     }
-
-    console.log(
-      `Програму ${programId} примусово закрито суперадміном. Неприйняті файли видалено з Cloudinary, картки збережено для історії.`,
-    );
   }
 }
 
