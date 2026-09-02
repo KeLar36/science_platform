@@ -21,7 +21,7 @@ router.post(
   userController.toggleBookmark,
 );
 
-router.get("/community", userController.getCommunity);\
+router.get("/community", userController.getCommunity);
 router.get("/all", verifyToken, adminAccess, userController.getAll);
 router.get("/count", verifyToken, adminAccess, userController.getCount);
 
