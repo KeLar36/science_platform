@@ -15,9 +15,13 @@ class SuperadminService {
             { $count: "count" },
           ],
           domainDistribution: [
-            { $group: { _id: "$domain", count: { $sum: 1 } } },
+            {
+              $group: {
+                _id: { $ifNull: ["$domain", "Не вказано"] },
+                count: { $sum: 1 },
+              },
+            },
             { $sort: { count: -1 } },
-            { $limit: 5 },
             { $project: { domain: "$_id", count: 1, _id: 0 } },
           ],
           recentProjects: [

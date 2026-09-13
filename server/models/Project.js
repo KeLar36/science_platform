@@ -50,6 +50,13 @@ const ProjectSchema = new mongoose.Schema(
       enum: ["Не призначено", "В процесі", "Завершено", "На доопрацюванні"],
     },
 
+    accessLevel: {
+      type: String,
+      enum: ["public", "restricted", "private"],
+      default: "public",
+      index: true,
+    },
+
     metadata: {
       type: Object,
       default: {},

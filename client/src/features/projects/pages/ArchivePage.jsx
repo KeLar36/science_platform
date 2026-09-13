@@ -5,12 +5,21 @@ import Footer from "@/shared/lib/components/layout/Footer";
 import Input from "@/shared/ui/Input";
 import Select from "@/shared/ui/Select";
 import Skeleton from "@/shared/ui/Skeleton";
+import Pagination from "@/shared/ui/Pagination";
 import { useProjects } from "@/features/projects/hooks/useProjects";
 import { SCIENTIFIC_DOMAINS } from "@/shared/lib/constants/domains";
 import ProjectCard from "@/features/projects/components/ProjectCard";
 import ProjectDetailModal from "@/features/projects/components/ProjectDetailModal";
 
-const ALLOWED_ARCHIVE_TYPES = ["Науковий журнал", "Стаття", "Датасет"];
+// Розширено список типів програм для випадаючого списку
+const ALLOWED_ARCHIVE_TYPES = [
+  "Науковий журнал",
+  "Стаття",
+  "Конференція",
+  "Грант",
+  "Датасет",
+  "Курс",
+];
 
 export default function ArchivePage() {
   const {
@@ -20,6 +29,7 @@ export default function ArchivePage() {
     updateFilter,
     handleResetFilters,
     pagination,
+    changePage,
   } = useProjects({}, 8, true);
 
   const [selectedProject, setSelectedProject] = useState(null);
@@ -53,6 +63,7 @@ export default function ArchivePage() {
 
       <main className="flex-grow pt-40 pb-24 px-3 lg:px-0 relative">
         <div className="max-w-7xl mx-auto relative z-10 flex flex-col gap-8">
+          {/* Шапка архіву */}
           <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-border-color/65 pb-8 w-full">
             <div className="space-y-3 max-w-2xl text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-xl text-[10px] font-black uppercase tracking-widest font-mono">
@@ -77,6 +88,7 @@ export default function ArchivePage() {
             </div>
           </div>
 
+          {/* Панель фільтрів */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-bg-secondary/60 p-4 rounded-2xl border border-border-color backdrop-blur-xs w-full items-center">
             <div className="md:col-span-2">
               <Input
@@ -114,6 +126,7 @@ export default function ArchivePage() {
             </div>
           )}
 
+          {/* Сітка матеріалів / Скелетон */}
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
@@ -138,16 +151,25 @@ export default function ArchivePage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((project) => (
-                <ProjectCard
-                  key={project._id}
-                  project={project}
-                  onSelectProject={setSelectedProject}
-                  getDownloadUrl={getDownloadUrl}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.map((project) => (
+                  <ProjectCard
+                    key={project._id}
+                    project={project}
+                    onSelectProject={setSelectedProject}
+                    getDownloadUrl={getDownloadUrl}
+                  />
+                ))}
+              </div>
+
+              {/* Пагінація */}
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={changePage}
+              />
+            </>
           )}
         </div>
       </main>

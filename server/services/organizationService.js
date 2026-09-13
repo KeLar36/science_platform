@@ -524,6 +524,16 @@ class OrganizationService {
         notifErr,
       );
     }
+    if (user && user.role === "reviewer") {
+      projectService
+        .reassignUnassignedProjects(orgId)
+        .catch((err) =>
+          console.error(
+            "Помилка авто-перерозподілу при прийнятті в установу:",
+            err,
+          ),
+        );
+    }
   }
 
   async rejectJoinRequest(orgId, userId) {
@@ -945,7 +955,7 @@ class OrganizationService {
 
   async deleteOrganization(orgId, requestUserId, userRole) {
     const org = await Organization.findById(orgId).select(
-      "creatorId logo members isSystem",
+      "creatorId logo isSystem",
     );
     if (!org) {
       const error = new Error("Установу не знайдено");
@@ -1079,28 +1089,6 @@ class OrganizationService {
 
     if (org.logo) {
       await this.#deleteImageFromCloudinary(org.logo);
-    }
-
-    try {
-      const membersToNotify = org.members.filter(
-        (mId) => mId.toString() !== requestUserId.toString(),
-      );
-
-      for (const memberId of membersToNotify) {
-        await notificationService.createNotification({
-          recipientId: memberId,
-          title: "Установу розформовано",
-          message: `Установу, в якій ви перебували, було видалено. Ваш профіль переведено у статус звичайного дослідника.`,
-          type: "SYSTEM_INFO",
-          link: "/profile",
-          sendEmail: true,
-        });
-      }
-    } catch (notifErr) {
-      console.error(
-        "Помилка сповіщення членів при видаленні організації:",
-        notifErr,
-      );
     }
 
     await Organization.findByIdAndDelete(orgId);

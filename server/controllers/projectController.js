@@ -92,8 +92,15 @@ class ProjectController {
 
   async create(req, res, next) {
     try {
-      const { title, description, domain, programId, authorComment, metadata } =
-        req.body;
+      const {
+        title,
+        description,
+        domain,
+        programId,
+        authorComment,
+        metadata,
+        accessLevel,
+      } = req.body;
 
       if (!title || !description || !programId) {
         return res.status(400).json({
@@ -128,6 +135,7 @@ class ProjectController {
         title: title.trim(),
         description: description.trim(),
         domain: domain || "Інше",
+        accessLevel: accessLevel || "public",
         authorId: req.user.id,
         programId,
         metadata: parsedMetadata,
@@ -245,15 +253,27 @@ class ProjectController {
     }
   }
 
-  async getArchive(req, res) {
+  async getArchive(req, res, next) {
     try {
-      const archiveProjects = await projectService.getPublicArchive();
-      return res.status(200).json(archiveProjects);
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 8;
+
+      const filters = {
+        search: req.query.search,
+        domain: req.query.domain,
+      };
+
+      const result = await projectService.getArchive(
+        req.user || null,
+        filters,
+        page,
+        limit,
+      );
+
+      return res.status(200).json(result);
     } catch (error) {
       console.error("💥 Помилка при отриманні архіву:", error);
-      return res.status(500).json({
-        message: "Не вдалося завантажити публічний архів матеріалів",
-      });
+      next(error);
     }
   }
 
@@ -280,22 +300,45 @@ class ProjectController {
 
   async submitReview(req, res, next) {
     try {
-      const { reviewerComments, reviewStatus, status, reviewerRecommendation } =
-        req.body;
+      const {
+        scores,
+        recommendation,
+        publicComment,
+        privateComment,
+        hasConflictOfInterest,
+        ethicalCompliance,
+        status,
+      } = req.body;
+
       const reviewerId = req.user.id;
 
-      const updatedProject = await projectService.submitReview(
+      const result = await projectService.submitReview(
         req.params.id,
         reviewerId,
         {
-          reviewerComments,
-          reviewStatus,
+          scores,
+          recommendation,
+          publicComment,
+          privateComment,
+          hasConflictOfInterest,
+          ethicalCompliance,
           status,
-          reviewerRecommendation,
         },
       );
 
-      res.json(updatedProject);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getReview(req, res, next) {
+    try {
+      const review = await projectService.getProjectReview(req.params.id);
+      if (!review) {
+        return res.status(404).json({ message: "Рецензію ще не додано" });
+      }
+      res.json(review);
     } catch (err) {
       next(err);
     }

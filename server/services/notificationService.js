@@ -147,9 +147,25 @@ class NotificationService {
 
     await Notification.insertMany(notificationsDocs);
 
-    for (const u of users) {
-      if (u.email) {
-        this.#sendEmailNotification(u.email, u.name, title, message, link);
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < users.length; i += BATCH_SIZE) {
+      const batch = users.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map((u) => {
+          if (u.email) {
+            return this.#sendEmailNotification(
+              u.email,
+              u.name,
+              title,
+              message,
+              link,
+            );
+          }
+          return Promise.resolve();
+        }),
+      );
+      if (i + BATCH_SIZE < users.length) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
 

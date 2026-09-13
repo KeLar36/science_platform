@@ -16,6 +16,12 @@ import { BarChart3, PieChart as PieIcon } from "lucide-react";
 
 const PIE_COLORS = ["#8b5cf6", "#6366f1", "#3b82f6", "#10b981", "#f59e0b"];
 
+const formatDomainLabel = (label) => {
+  if (!label) return "";
+  if (label.length > 22) return `${label.substring(0, 20)}...`;
+  return label;
+};
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
@@ -37,79 +43,96 @@ export default function OverviewCharts({
   domainData = [],
   programTypesData = [],
 }) {
+  const chartHeight = Math.max(280, domainData.length * 32);
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
       <Card className="lg:col-span-2 p-6 bg-bg-secondary border-border-color space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-brand">
             <BarChart3 size={16} />
             <span>Розподіл праць за галузями</span>
           </div>
+          <span className="text-[10px] font-mono text-text-muted">
+            Всього галузей: {domainData.length}
+          </span>
         </div>
 
-        <div className="h-60 w-full pt-2">
+        <div className="w-full pt-2 overflow-y-auto max-h-[330px] custom-scrollbar">
           {domainData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={domainData}
-                margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient
-                    id="purpleBarGradient"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                    <stop
-                      offset="100%"
-                      stopColor="#8b5cf6"
-                      stopOpacity={0.15}
-                    />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#1e293b"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="domain"
-                  stroke="#64748b"
-                  fontSize={10}
-                  fontFamily="monospace"
-                  tickLine={false}
-                  axisLine={{ stroke: "#1e293b" }}
-                />
-                <YAxis
-                  stroke="#64748b"
-                  fontSize={10}
-                  fontFamily="monospace"
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <RechartsTooltip
-                  content={<CustomTooltip />}
-                  cursor={{ fill: "rgba(139, 92, 246, 0.05)" }}
-                />
-                <Bar
-                  dataKey="count"
-                  fill="url(#purpleBarGradient)"
-                  stroke="#8b5cf6"
-                  strokeWidth={1}
-                  radius={[4, 4, 0, 0]}
-                  activeBar={{
-                    fill: "#8b5cf6",
-                    stroke: "#f8fafc",
-                    strokeWidth: 1.5,
-                  }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ height: `${chartHeight}px`, width: "100%" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={domainData}
+                  margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                >
+                  <defs>
+                    <linearGradient
+                      id="purpleBarGradientHorizontal"
+                      x1="0"
+                      y1="0"
+                      x2="1"
+                      y2="0"
+                    >
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                      <stop
+                        offset="100%"
+                        stopColor="#8b5cf6"
+                        stopOpacity={0.9}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#1e293b"
+                    horizontal={false}
+                  />
+                  {/* XAxis виступає як лічильник кількості */}
+                  <XAxis
+                    type="number"
+                    stroke="#64748b"
+                    fontSize={10}
+                    fontFamily="monospace"
+                    tickLine={false}
+                    axisLine={{ stroke: "#1e293b" }}
+                    allowDecimals={false}
+                  />
+                  {/* YAxis відображає назви галузей */}
+                  <YAxis
+                    type="category"
+                    dataKey="domain"
+                    stroke="#94a3b8"
+                    fontSize={10}
+                    fontFamily="monospace"
+                    tickLine={false}
+                    axisLine={false}
+                    width={160}
+                    tickFormatter={formatDomainLabel}
+                    interval={0} // Повертає 100% усіх галузей без приховування
+                  />
+                  <RechartsTooltip
+                    content={<CustomTooltip />}
+                    cursor={{ fill: "rgba(139, 92, 246, 0.05)" }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="url(#purpleBarGradientHorizontal)"
+                    stroke="#8b5cf6"
+                    strokeWidth={1}
+                    radius={[0, 4, 4, 0]}
+                    barSize={16}
+                    activeBar={{
+                      fill: "#8b5cf6",
+                      stroke: "#f8fafc",
+                      strokeWidth: 1.5,
+                    }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <div className="h-full flex items-center justify-center font-mono text-xs text-text-muted">
+            <div className="h-60 flex items-center justify-center font-mono text-xs text-text-muted">
               Дані для графіку відсутні
             </div>
           )}

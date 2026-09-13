@@ -25,4 +25,9 @@ export const reviewerApi = {
     );
     return res.data;
   },
+
+  getReview: async (projectId) => {
+    const res = await axiosInstance.get(`/projects/${projectId}/review`);
+    return res.data;
+  },
 };

@@ -1,11 +1,22 @@
 import axiosInstance from "@/shared/api/axios";
 
 export const projectApi = {
-  getArchive: async () => {
-    const res = await axiosInstance.get("/projects/archive");
-    return res.data;
-  },
+  getArchive: async (filters = {}, page = 1, limit = 8) => {
+    const params = new URLSearchParams({
+      page,
+      limit,
+      ...(filters.search && { search: filters.search }),
+      ...(filters.domain &&
+        filters.domain !== "Всі галузі" && { domain: filters.domain }),
+      ...(filters.type &&
+        filters.type !== "Всі типи" && { type: filters.type }),
+    });
 
+    const response = await axiosInstance.get(
+      `/projects/archive?${params.toString()}`,
+    );
+    return response.data;
+  },
   getById: async (id) => {
     const res = await axiosInstance.get(`/projects/${id}`);
     return res.data;

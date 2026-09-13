@@ -192,7 +192,7 @@ export default function MyProjectsTab({
 
                   {hasReviewerFeedback && (
                     <div
-                      className={`p-3 rounded-xl border space-y-1 text-xs ${
+                      className={`p-3.5 rounded-xl border space-y-2 text-xs ${
                         isAccepted
                           ? "bg-emerald-500/5 border-emerald-500/20"
                           : isRejected
@@ -200,32 +200,43 @@ export default function MyProjectsTab({
                             : "bg-bg-secondary border-border-color"
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase">
-                        {isAccepted ? (
-                          <CheckCircle2
-                            size={12}
-                            className="text-emerald-500"
-                          />
-                        ) : isRejected ? (
-                          <XCircle size={12} className="text-rose-500" />
-                        ) : (
-                          <AlertTriangle size={12} className="text-amber-500" />
+                      <div className="flex items-center justify-between font-mono text-[10px] font-bold uppercase">
+                        <div className="flex items-center gap-1.5">
+                          {isAccepted ? (
+                            <CheckCircle2
+                              size={13}
+                              className="text-emerald-500"
+                            />
+                          ) : isRejected ? (
+                            <XCircle size={13} className="text-rose-500" />
+                          ) : (
+                            <AlertTriangle
+                              size={13}
+                              className="text-amber-500"
+                            />
+                          )}
+                          <span
+                            className={
+                              isAccepted
+                                ? "text-emerald-500"
+                                : isRejected
+                                  ? "text-rose-500"
+                                  : "text-amber-500"
+                            }
+                          >
+                            Висновок рецензента:
+                          </span>
+                        </div>
+
+                        {project.review?.totalScore !== undefined && (
+                          <span className="text-brand font-bold bg-brand/10 px-2 py-0.5 rounded border border-brand/20">
+                            Оцінка: {project.review.totalScore} / 5
+                          </span>
                         )}
-                        <span
-                          className={
-                            isAccepted
-                              ? "text-emerald-500"
-                              : isRejected
-                                ? "text-rose-500"
-                                : "text-amber-500"
-                          }
-                        >
-                          Висновок рецензента:
-                        </span>
                       </div>
 
                       {project.reviewerRecommendation && (
-                        <p className="font-medium text-text-primary italic">
+                        <p className="font-medium text-text-primary italic text-[11px]">
                           "{project.reviewerRecommendation}"
                         </p>
                       )}
@@ -235,6 +246,27 @@ export default function MyProjectsTab({
                           {project.reviewerComments}
                         </p>
                       )}
+
+                      {project.review?.scores &&
+                        Object.keys(project.review.scores).length > 0 && (
+                          <div className="pt-2 border-t border-border-color/40 grid grid-cols-2 gap-1.5 text-[10px] font-mono">
+                            {Object.entries(project.review.scores).map(
+                              ([criterion, score]) => (
+                                <div
+                                  key={criterion}
+                                  className="flex justify-between px-2 py-1 rounded bg-bg-tertiary"
+                                >
+                                  <span className="text-text-muted capitalize">
+                                    {criterion}:
+                                  </span>
+                                  <span className="font-bold text-brand">
+                                    {score}/5
+                                  </span>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        )}
                     </div>
                   )}
                 </Card>

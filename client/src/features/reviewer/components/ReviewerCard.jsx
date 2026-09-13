@@ -3,6 +3,7 @@ import {
   MessageSquare,
   CheckCircle2,
   FileText,
+  FileArchive,
   Calendar,
   Award,
   FileCode2,
@@ -33,6 +34,11 @@ export default function ReviewerCard({
       : null;
   const authorComment = latestVersion?.authorComment;
 
+  // Визначення, чи це архівний файл
+  const fileName = latestVersion?.fileName || "";
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+  const isArchive = ["zip", "rar", "7z", "tar"].includes(ext);
+
   const getReviewStatusBadge = () => {
     if (isAccepted) return <Badge status="success">Прийнято</Badge>;
     if (isRejected) return <Badge status="danger">Відхилено</Badge>;
@@ -44,6 +50,7 @@ export default function ReviewerCard({
 
   return (
     <Card hoverable className="p-4 space-y-3 text-left">
+      {/* Шапка картки */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border-color pb-2.5">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-mono text-brand font-bold uppercase">
@@ -59,6 +66,7 @@ export default function ReviewerCard({
         <div>{getReviewStatusBadge()}</div>
       </div>
 
+      {/* Назва та короткий опис */}
       <div>
         <h3 className="font-bold text-sm text-text-primary font-sans leading-snug mb-1">
           {project.title}
@@ -68,6 +76,7 @@ export default function ReviewerCard({
         </p>
       </div>
 
+      {/* Інформація про автора та дату */}
       <div className="flex items-center justify-between gap-3 p-2.5 bg-bg-secondary rounded-lg border border-border-color text-xs">
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar
@@ -99,6 +108,7 @@ export default function ReviewerCard({
         </div>
       </div>
 
+      {/* Коментар автора (якщо є) */}
       {authorComment && (
         <div className="p-2.5 bg-bg-tertiary/60 rounded-lg border border-border-color text-xs space-y-0.5">
           <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-brand uppercase">
@@ -111,6 +121,7 @@ export default function ReviewerCard({
         </div>
       )}
 
+      {/* Панель дій */}
       <div className="flex items-center justify-between gap-2 pt-1">
         <Button
           variant="outline"
@@ -125,8 +136,13 @@ export default function ReviewerCard({
         <div className="flex items-center gap-2">
           {latestVersion?.fileUrl && (
             <a href={latestVersion.fileUrl} target="_blank" rel="noreferrer">
-              <Button variant="ghost" size="sm" icon={FileText}>
-                Файл v{project.versions.length}
+              <Button
+                variant="outline"
+                size="sm"
+                icon={isArchive ? FileArchive : FileText}
+              >
+                {isArchive ? "Архів v" : "Файл v"}
+                {project.versions.length}
               </Button>
             </a>
           )}

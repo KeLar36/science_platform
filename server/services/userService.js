@@ -4,6 +4,7 @@ const Organization = require("../models/Organization");
 const cloudinary = require("cloudinary").v2;
 const mongoose = require("mongoose");
 const notificationService = require("./notificationService");
+const projectService = require("./projectService");
 
 class UserService {
   async #deleteImageFromCloudinary(imageUrl) {
@@ -94,7 +95,11 @@ class UserService {
 
     const ownedOrg = await OrganizationModel.findOne({ creatorId: userId });
     if (ownedOrg) {
-      if (ownedOrg.members.length <= 1) {
+      const membersCount = await User.countDocuments({
+        organizationId: ownedOrg._id,
+      });
+
+      if (membersCount <= 1) {
         const error = new Error(
           "Ви є єдиним членом та засновником установи. Будь ласка, видаліть установу перед анонімізацією профілю.",
         );
@@ -110,8 +115,8 @@ class UserService {
     }
 
     await OrganizationModel.updateMany(
-      { members: userId },
-      { $pull: { members: userId } },
+      { "joinRequests.userId": userId },
+      { $pull: { joinRequests: { userId: userId } } },
     );
 
     if (user.image) {
@@ -150,7 +155,6 @@ class UserService {
     );
     return user;
   }
-
   async getById(userId) {
     const user = await User.findById(userId).select("-password").lean();
 
@@ -222,6 +226,22 @@ class UserService {
           err,
         );
       }
+    }
+
+    if (
+      updatedUser &&
+      updatedUser.role === "reviewer" &&
+      profileData.isReviewerActive === true &&
+      updatedUser.organizationId
+    ) {
+      projectService
+        .reassignUnassignedProjects(updatedUser.organizationId)
+        .catch((err) =>
+          console.error(
+            "Помилка авто-перерозподілу при активації профілю:",
+            err,
+          ),
+        );
     }
 
     const userObj = updatedUser.toObject
@@ -318,6 +338,14 @@ class UserService {
       });
     } catch (err) {
       console.error("Помилка надсилання сповіщення про зміну ролі:", err);
+    }
+
+    if (role === "reviewer" && updatedUser.organizationId) {
+      projectService
+        .reassignUnassignedProjects(updatedUser.organizationId)
+        .catch((err) =>
+          console.error("Помилка авто-перерозподілу при зміні ролі:", err),
+        );
     }
 
     return updatedUser;

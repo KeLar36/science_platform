@@ -65,22 +65,57 @@ class ProjectService {
     const query = this.#buildFilterQuery(filters);
     query.authorId = authorId;
 
-    const skip = (page - 1) * limit;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 8);
+    const skip = (pageNum - 1) * limitNum;
 
     const projects = await Project.find(query)
       .populate("programId", "title type organizationId")
-      .populate("reviewerId", "name email")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limitNum)
+      .lean();
 
     const total = await Project.countDocuments(query);
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limitNum) || 1;
+
+    if (projects.length === 0) {
+      return {
+        projects: [],
+        totalPages: 1,
+        currentPage: pageNum,
+        totalItems: 0,
+      };
+    }
+
+    const Review = require("../models/Review");
+    const projectIds = projects.map((p) => p._id);
+
+    const reviews = await Review.find({ projectId: { $in: projectIds } })
+      .select(
+        "projectId totalScore scores publicComment recommendation createdAt",
+      )
+      .lean();
+
+    const projectsWithReviews = projects.map((project) => {
+      const review = reviews.find(
+        (r) => r.projectId.toString() === project._id.toString(),
+      );
+
+      return {
+        ...project,
+        review: review || null,
+        reviewerComments:
+          review?.publicComment || project.reviewerComments || "",
+        reviewerRecommendation:
+          review?.recommendation || project.reviewerRecommendation || "",
+      };
+    });
 
     return {
-      projects,
+      projects: projectsWithReviews,
       totalPages,
-      currentPage: Number(page),
+      currentPage: pageNum,
       totalItems: total,
     };
   }
@@ -121,8 +156,13 @@ class ProjectService {
     };
   }
 
-  async submitReview(id, reviewerId, reviewData) {
-    const project = await Project.findById(id);
+  async submitReview(projectId, reviewerId, reviewData) {
+    const Review = require("../models/Review");
+
+    const project = await Project.findById(projectId).populate(
+      "programId",
+      "type title",
+    );
     if (!project) {
       const error = new Error("Проєкт не знайдено");
       error.statusCode = 404;
@@ -137,13 +177,49 @@ class ProjectService {
       throw error;
     }
 
-    if (reviewData.reviewerComments !== undefined)
-      project.reviewerComments = reviewData.reviewerComments;
-    if (reviewData.reviewStatus !== undefined)
-      project.reviewStatus = reviewData.reviewStatus;
-    if (reviewData.status !== undefined) project.status = reviewData.status;
-    if (reviewData.reviewerRecommendation !== undefined)
-      project.reviewerRecommendation = reviewData.reviewerRecommendation;
+    const programType = project.programId?.type || "Науковий журнал";
+
+    let totalScore = 0;
+    if (reviewData.scores && typeof reviewData.scores === "object") {
+      const scoreValues = Object.values(reviewData.scores).map(Number);
+      if (scoreValues.length > 0) {
+        const sum = scoreValues.reduce((acc, curr) => acc + curr, 0);
+        totalScore = Number((sum / scoreValues.length).toFixed(2));
+      }
+    }
+
+    const newReview = new Review({
+      projectId,
+      reviewerId,
+      programType,
+      scores: reviewData.scores || {},
+      totalScore: totalScore || 5,
+      recommendation: reviewData.recommendation || "Прийняти без змін",
+      hasConflictOfInterest: Boolean(reviewData.hasConflictOfInterest),
+      ethicalCompliance:
+        reviewData.ethicalCompliance !== undefined
+          ? Boolean(reviewData.ethicalCompliance)
+          : true,
+      publicComment:
+        reviewData.publicComment ||
+        reviewData.reviewerComments ||
+        "Без зауважень",
+      privateComment: reviewData.privateComment || "",
+    });
+
+    await newReview.save();
+
+    if (reviewData.status) project.status = reviewData.status;
+
+    if (reviewData.status === "На доопрацюванні") {
+      project.reviewStatus = "На доопрацюванні";
+    } else {
+      project.reviewStatus = "Завершено";
+    }
+
+    project.reviewerComments =
+      reviewData.publicComment || reviewData.reviewerComments || "";
+    project.reviewerRecommendation = reviewData.recommendation || "";
 
     const savedProject = await project.save();
 
@@ -152,7 +228,7 @@ class ProjectService {
         await notificationService.createNotification({
           recipientId: project.authorId,
           title: "Результат рецензування",
-          message: `Рецензент розглянув ваш проєкт "${project.title}". Статус роботи: "${project.status}".`,
+          message: `Рецензент розглянув ваш проєкт "${project.title}". Підсумковий бал: ${totalScore}/5. Статус: "${project.status}".`,
           type: "PROJECT_REVIEWED",
           link: `/projects/${project._id}`,
           sendEmail: true,
@@ -162,7 +238,17 @@ class ProjectService {
       }
     }
 
-    return savedProject;
+    return {
+      project: savedProject,
+      review: newReview,
+    };
+  }
+
+  async getProjectReview(projectId) {
+    const Review = require("../models/Review");
+    return await Review.findOne({ projectId })
+      .populate("reviewerId", "name email academicDegree image")
+      .sort({ createdAt: -1 });
   }
 
   async getOrganizationProjects(orgId, filters = {}, page = 1, limit = 8) {
@@ -224,27 +310,129 @@ class ProjectService {
     };
   }
 
-  async getById(id) {
-    return await Project.findById(id)
-      .populate("authorId", "name email image")
+  async getById(id, currentUser = null) {
+    const Review = require("../models/Review");
+
+    const project = await Project.findById(id)
+      .populate("authorId", "name email image role")
       .populate("programId", "title type description organizationId")
-      .populate("reviewerId", "name email allowedDomains academicDegree");
+      .lean();
+
+    if (!project) {
+      const error = new Error("Проєкт не знайдено");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const isAuthor =
+      currentUser &&
+      project.authorId &&
+      project.authorId._id.toString() === currentUser.id.toString();
+
+    const isAssignedReviewer =
+      currentUser &&
+      project.reviewerId &&
+      project.reviewerId.toString() === currentUser.id.toString();
+
+    const isManagement =
+      currentUser &&
+      (currentUser.role === "superadmin" || currentUser.role === "admin");
+
+    const review = await Review.findOne({ projectId: id }).lean();
+
+    const result = {
+      ...project,
+      review: review || null,
+      reviewerComments: review?.publicComment || project.reviewerComments || "",
+      reviewerRecommendation:
+        review?.recommendation || project.reviewerRecommendation || "",
+    };
+
+    if (isAssignedReviewer || isManagement) {
+      if (project.reviewerId) {
+        const reviewerUser = await User.findById(project.reviewerId)
+          .select("name email allowedDomains academicDegree image")
+          .lean();
+        result.reviewer = reviewerUser || null;
+      }
+    } else {
+      delete result.reviewerId;
+    }
+
+    return result;
   }
 
-  async getPublicArchive() {
-    const projects = await Project.find({ status: "Прийнято" })
-      .populate("authorId", "name")
-      .populate({
-        path: "programId",
-        select: "type title",
-      });
+  async getArchive(currentUser = null, queryFilters = {}, page = 1, limit = 8) {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 8);
+    const skip = (pageNum - 1) * limitNum;
 
-    const allowedPublicTypes = ["Науковий журнал", "Стаття", "Датасет"];
+    // 1. Дозволені типи для публічного репозиторію (все, крім Грантів)
+    const allowedTypes = [
+      "Науковий журнал",
+      "Стаття",
+      "Датасет",
+      "Конференція",
+      "Курс",
+    ];
 
-    return projects.filter((project) => {
-      const programType = project.programId?.type;
-      return allowedPublicTypes.includes(programType);
-    });
+    // Знаходимо всі ID програм, які НЕ є Грантами
+    const validPrograms = await Program.find({
+      type: { $in: allowedTypes },
+    }).select("_id organizationId");
+    const validProgramIds = validPrograms.map((p) => p._id);
+
+    const query = this.#buildFilterQuery(queryFilters);
+
+    // 2. Фільтр статусів та обмеження типів програм (виключає Гранти)
+    query.status = { $in: ["Прийнято", "approved"] };
+    query.programId = { $in: validProgramIds };
+
+    // 3. Логіка рівнів доступу (Public vs Restricted)
+    if (!currentUser) {
+      query.$or = [
+        { accessLevel: "public" },
+        { accessLevel: { $exists: false } },
+      ];
+    } else if (currentUser.role !== "superadmin") {
+      const userOrgId = currentUser.organizationId
+        ? currentUser.organizationId.toString()
+        : null;
+
+      const userOrgProgramIds = validPrograms
+        .filter(
+          (p) => p.organizationId && p.organizationId.toString() === userOrgId,
+        )
+        .map((p) => p._id);
+
+      query.$or = [
+        { accessLevel: "public" },
+        { accessLevel: { $exists: false } },
+        {
+          accessLevel: "restricted",
+          programId: { $in: userOrgProgramIds },
+        },
+      ];
+    }
+
+    const [projects, total] = await Promise.all([
+      Project.find(query)
+        .populate("authorId", "name image email")
+        .populate("programId", "title type organizationId")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      Project.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum) || 1;
+
+    return {
+      projects,
+      totalPages,
+      currentPage: pageNum,
+      totalItems: total,
+    };
   }
 
   async create(projectData) {
@@ -396,6 +584,107 @@ class ProjectService {
     }
 
     return savedProject;
+  }
+
+  // Фоновий / Тригерний процес авто-перепризначення невизначених проєктів
+  // Викликається при появі або зміні активності рецензента в організації, а також при видаленні рецензента
+  async reassignUnassignedProjects(organizationId) {
+    if (!organizationId) return;
+
+    const orgPrograms = await Program.find({ organizationId }).select(
+      "_id title type",
+    );
+    const programIds = orgPrograms.map((p) => p._id);
+
+    if (programIds.length === 0) return;
+
+    const unassignedProjects = await Project.find({
+      programId: { $in: programIds },
+      reviewStatus: "Не призначено",
+      status: "На розгляді",
+    });
+
+    console.log(
+      `Знайдено ${unassignedProjects.length} проєктів для авто-перерозподілу.`,
+    );
+
+    for (const proj of unassignedProjects) {
+      const program = orgPrograms.find(
+        (p) => p._id.toString() === proj.programId.toString(),
+      );
+      if (!program) continue;
+
+      // Підбираємо рецензента за нашим алгоритмом
+      const validReviewers = await User.find({
+        role: "reviewer",
+        organizationId: organizationId,
+        isBanned: false,
+        isReviewerActive: true,
+        allowedDomains: proj.domain,
+        allowedTypes: program.type,
+      }).select("_id name lastAssignedAt updatedAt");
+
+      if (validReviewers && validReviewers.length > 0) {
+        const reviewerIds = validReviewers.map((r) => r._id);
+
+        const activeCounts = await Project.aggregate([
+          {
+            $match: {
+              reviewerId: { $in: reviewerIds },
+              status: { $in: ["На розгляді", "На доопрацюванні"] },
+            },
+          },
+          { $group: { _id: "$reviewerId", count: { $sum: 1 } } },
+        ]);
+
+        const loadMap = new Map();
+        activeCounts.forEach((item) =>
+          loadMap.set(item._id.toString(), item.count),
+        );
+
+        let selectedReviewer = validReviewers[0];
+        let minKr = loadMap.get(selectedReviewer._id.toString()) || 0;
+
+        for (const reviewer of validReviewers) {
+          const currentKr = loadMap.get(reviewer._id.toString()) || 0;
+          if (currentKr < minKr) {
+            minKr = currentKr;
+            selectedReviewer = reviewer;
+          } else if (currentKr === minKr) {
+            const timeA = new Date(
+              selectedReviewer.lastAssignedAt ||
+                selectedReviewer.updatedAt ||
+                0,
+            ).getTime();
+            const timeB = new Date(
+              reviewer.lastAssignedAt || reviewer.updatedAt || 0,
+            ).getTime();
+            if (timeB < timeA) selectedReviewer = reviewer;
+          }
+        }
+
+        proj.reviewerId = selectedReviewer._id;
+        proj.reviewStatus = "В процесі";
+        await proj.save();
+
+        await User.findByIdAndUpdate(selectedReviewer._id, {
+          $set: { lastAssignedAt: new Date() },
+        });
+
+        await notificationService.createNotification({
+          recipientId: selectedReviewer._id,
+          title: "Новий проєкт для рецензування",
+          message: `Вам автоматично призначено проєкт з черги: "${proj.title}".`,
+          type: "PROJECT_ASSIGNED",
+          link: `/reviewer/queue`,
+          sendEmail: true,
+        });
+
+        console.log(
+          `Проєкт "${proj.title}" успішно перепризначено рецензенту ${selectedReviewer.name}`,
+        );
+      }
+    }
   }
 
   async update(id, updateData) {

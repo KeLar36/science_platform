@@ -15,6 +15,11 @@ export default function ReviewerQueueTab() {
   const [activeChatProject, setActiveChatProject] = useState(null);
   const [activeReviewProject, setActiveReviewProject] = useState(null);
 
+  const handleReviewSuccess = () => {
+    setActiveReviewProject(null);
+    refreshQueue();
+  };
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -66,7 +71,7 @@ export default function ReviewerQueueTab() {
           project={activeReviewProject}
           isOpen={!!activeReviewProject}
           onClose={() => setActiveReviewProject(null)}
-          onSuccess={refreshQueue}
+          onSuccess={handleReviewSuccess}
         />
       )}
     </div>

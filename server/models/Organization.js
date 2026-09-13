@@ -4,7 +4,7 @@ const OrganizationSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Назва організації є обов'язковою"],
+      required: [true, "Назва організації є обов'язковими"],
       trim: true,
       unique: true,
     },
@@ -29,16 +29,16 @@ const OrganizationSchema = new mongoose.Schema(
     legalForm: {
       type: String,
       enum: [
-        "ДУ/КЗ", // Державна установа / Комунальний заклад (університети, класичні НДІ)
-        "КНП", // Комунальне некомерційне підприємство (університетські клініки, лікарні)
-        "ДП", // Державне підприємство (науково-виробничі комплекси, бюро)
-        "ТОВ", // Товариство з обмеженою відповідальністю (приватні лабораторії, видавництва)
-        "ФОП", // Фізична особа-підприємець (окремі незалежні дослідники, розробники)
-        "ГО", // Громадська організація (наукові спілки, академії наук як громадські об'єднання)
-        "БФ/БО", // Благодійний фонд / Благодійна організація (грантові спонсори)
-        "ПП", // Приватне підприємство
-        "ПрАТ", // Приватне акціонерне товариство
-        "АТ", // Акціонерне товариство
+        "ДУ/КЗ",
+        "КНП",
+        "ДП",
+        "ТОВ",
+        "ФОП",
+        "ГО",
+        "БФ/БО",
+        "ПП",
+        "ПрАТ",
+        "АТ",
         "Інше",
       ],
       default: "ДУ/КЗ",
@@ -78,6 +78,7 @@ const OrganizationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true, // Швидкий пошук організації за її засновником
     },
     isSystem: {
       type: Boolean,
@@ -119,5 +120,11 @@ const OrganizationSchema = new mongoose.Schema(
     collection: "organizations",
   },
 );
+
+OrganizationSchema.index({ name: "text", city: "text" });
+
+OrganizationSchema.index({ status: 1, isVerified: 1 });
+
+OrganizationSchema.index({ scientificDomains: 1 });
 
 module.exports = mongoose.model("Organization", OrganizationSchema);

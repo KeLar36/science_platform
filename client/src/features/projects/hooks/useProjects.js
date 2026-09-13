@@ -39,35 +39,25 @@ export function useProjects(
       setError(null);
       try {
         if (isArchiveMode) {
-          const archiveData = await projectApi.getArchive();
-          let items = Array.isArray(archiveData) ? archiveData : [];
+          // Передаємо фільтри та сторінку напряму на бекенд!
+          const data = await projectApi.getArchive(
+            currentFilters,
+            pageToFetch,
+            limit,
+          );
 
-          if (currentFilters.search) {
-            const query = currentFilters.search.toLowerCase();
-            items = items.filter(
-              (p) =>
-                p.title?.toLowerCase().includes(query) ||
-                p.authorId?.name?.toLowerCase().includes(query),
-            );
-          }
-
-          if (currentFilters.domain && currentFilters.domain !== "Всі галузі") {
-            items = items.filter((p) => p.domain === currentFilters.domain);
-          }
-
-          if (currentFilters.type && currentFilters.type !== "Всі типи") {
-            items = items.filter(
-              (p) =>
-                p.programId?.type === currentFilters.type ||
-                p.type === currentFilters.type,
-            );
+          let items = [];
+          if (Array.isArray(data)) {
+            items = data;
+          } else if (data && Array.isArray(data.projects)) {
+            items = data.projects;
           }
 
           setProjects(items);
           setPagination({
-            currentPage: 1,
-            totalPages: 1,
-            totalItems: items.length,
+            currentPage: data?.currentPage || pageToFetch || 1,
+            totalPages: data?.totalPages || 1,
+            totalItems: data?.totalItems || items.length,
           });
         } else {
           const data = await projectApi.getAll(
@@ -111,7 +101,6 @@ export function useProjects(
 
   useEffect(() => {
     fetchProjects(pagination.currentPage, filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     pagination.currentPage,
     filters.domain,
