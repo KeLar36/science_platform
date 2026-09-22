@@ -9,6 +9,12 @@ import {
   Award,
   Search,
   CheckCircle2,
+  FileText,
+  Users,
+  Lock,
+  Globe2,
+  Cpu,
+  ChevronRight,
 } from "lucide-react";
 import axiosInstance from "@/shared/api/axios";
 import { useAuth } from "@/shared/lib/hooks/useAuth";
@@ -30,6 +36,15 @@ import {
   staggerItem,
 } from "@/shared/config/animation";
 
+const POPULAR_DOMAINS = [
+  "Інформаційні технології",
+  "Штучний інтелект & Data Science",
+  "Медицина та охорона здоров'я",
+  "Аграрні науки",
+  "Фізика та астрономія",
+  "Екологія та довкілля",
+];
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -37,6 +52,7 @@ export default function HomePage() {
   const [totalOrgs, setTotalOrgs] = useState(0);
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,49 +77,58 @@ export default function HomePage() {
     fetchData();
   }, []);
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/programs?search=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      navigate("/programs");
+    }
+  };
+
   const timelineSteps = [
     {
       title: "01. Створення профілю науковця / установи",
       description:
-        "Швидка реєстрація індивідуального дослідника чи верифікація ЗВО за кодом ЄДРПОУ.",
+        "Швидка реєстрація індивідуального дослідника або миттєва верифікація ЗВО за офіційним кодом ЄДРПОУ.",
       status: "completed",
     },
     {
-      title: "02. Розумний пошук та подача праць",
+      title: "02. Розумний пошук та подача матеріалів",
       description:
-        "Фільтрація грантів, наукових журналів та конференцій за галузями з завантаженням матеріалів.",
+        "Зручна фільтрація грантів, наукових фахових журналів та конференцій з можливістю завантаження версій документів.",
       status: "current",
     },
     {
-      title: "03. Незалежне онлайн-рецензування",
+      title: "03. Незалежне сліпе оцінювання (Double-Blind)",
       description:
-        "Автоматичний підбір експерта з відповідної галузі знань та прозоре оцінювання.",
+        "Детермінований алгоритм авто-розподілу kr підбирає профільних рецензентів із повним маскуванням PII даних.",
       status: "pending",
     },
     {
       title: "04. Публікація та капіталізація розробок",
       description:
-        "Отримання фінансування, інтеграція у відкриті бази даних та сертифікація.",
+        "Присвоєння сертифікатів, інтеграція матеріалів у відкриті репозиторії та відкриття шляху до фінансування.",
       status: "pending",
     },
   ];
 
   const faqItems = [
     {
-      q: "Хто може подавати заявки на фінансування?",
-      a: "Подавати заявки можуть індивідуальні дослідники, аспіранти, докторанти, а також офіційні представники університетів та науково-дослідних інститутів України.",
+      q: "Хто може подавати заявки на фінансування та публікації?",
+      a: "Подавати матеріали можуть індивідуальні науковці, молоді вчені, аспіранти, а також офіційні представники закладів вищої освіти (ЗВО) та науково-дослідних інститутів (НДІ) України.",
     },
     {
-      q: "Які документи потрібні для реєстрації організації?",
-      a: "Для реєстрації юридичної особи необхідно вказати офіційну назву, організаційно-правову форму, місто базування та дійсний код ЄДРПОУ. Заявка проходить ручну модерацію протягом 24 годин.",
+      q: "Як відбувається верифікація установи в системі?",
+      a: "Представник вказує назву, правову форму, місто та дійсний код ЄДРПОУ. Після перевірки системним адміністратором організація отримує статус 'Верифіковано' та доступ до адмін-панелі.",
     },
     {
-      q: "Чи є платформа безкоштовною для науковців?",
-      a: "Так, Open Science Platform є абсолютно безкоштовним агрегатором відкритих наукових можливостей у рамках європейської інтеграції української науки.",
+      q: "Як працює алгоритм захисту анонімності рецензентів?",
+      a: "Платформа застосовує принципи Double-Blind Peer Review: автор не бачить персональних даних експерта (PII), а рецензент отримує роботу без згадки про приналежність автора до конкретного вишу чи кафедри.",
     },
     {
-      q: "Як стати незалежним рецензентом проєктів?",
-      a: "Подайте заявку через особистий кабінет користувача. Після перевірки наукового ступеня та галузей вам буде надано статус рецензента.",
+      q: "Чи є платформа безкоштовною для українських дослідників?",
+      a: "Так, Open Science Platform Ukraine є повністю відкритою та безкоштовною екосистемою в рамках інтеграції вітчизняної науки до європейського простору (ERA).",
     },
   ];
 
@@ -112,31 +137,36 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-brand selection:text-white">
+    <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary selection:bg-brand selection:text-white font-sans antialiased">
       <Navbar />
 
-      <main className="flex-grow px-3 lg:px-0 pt-32 pb-24 space-y-20 relative z-10 overflow-hidden">
-        <section className="max-w-7xl mx-auto w-full">
+      <main className="flex-grow pt-32 pb-24 space-y-24 relative z-10 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-brand/10 blur-[140px] pointer-events-none rounded-full -z-10" />
+        <div className="absolute top-[40%] right-0 w-[500px] h-[500px] bg-purple-600/10 blur-[160px] pointer-events-none rounded-full -z-10" />
+
+        <section className="max-w-7xl mx-auto w-full px-4 lg:px-0">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <ScrollReveal
               variants={fadeInLeft}
               className="lg:col-span-7 space-y-6 text-left"
             >
-              <Badge status="success" className="gap-1.5 py-1 px-3">
-                <Sparkles size={12} className="text-brand" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 border border-brand/20 rounded-full text-brand text-xs font-mono font-bold uppercase tracking-wider">
+                <Sparkles size={13} className="animate-pulse" />
                 <span>Open Science Platform Ukraine</span>
-              </Badge>
+              </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black font-sans uppercase tracking-tight text-text-primary leading-[1.05]">
-                Єдиний простір <br />
-                <span className="text-brand">відкритої науки</span> <br />в
-                Україні
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-text-primary leading-[1.05]">
+                Єдиний цифровий <br />
+                <span className="bg-gradient-to-r from-brand via-purple-500 to-indigo-500 bg-clip-text text-transparent">
+                  простір науки
+                </span>{" "}
+                <br />в Україні
               </h1>
 
-              <p className="text-sm font-medium text-text-secondary leading-relaxed max-w-xl">
-                Цифровий хаб, що об'єднує наукові гранти, фахові видання,
-                профільні курси, відкриті датасети та міжнародні конференції в
-                єдину прозору екосистему.
+              <p className="text-sm sm:text-base font-medium text-text-secondary leading-relaxed max-w-xl">
+                Сучасний національний інфраструктурний хаб, що об'єднує грантові
+                конкурси, фахові видання, відкриті датасети та незалежне
+                рецензування в єдину прозору екосистему.
               </p>
 
               <div className="flex flex-wrap items-center gap-4 pt-2">
@@ -147,92 +177,116 @@ export default function HomePage() {
                   onClick={() =>
                     navigate(isAuthenticated ? "/programs" : "/register")
                   }
+                  className="font-mono text-xs uppercase tracking-wider px-7 py-3.5 shadow-lg shadow-brand/20"
                 >
-                  {isAuthenticated ? "Каталог програм" : "Приєднатися"}
+                  {isAuthenticated ? "Каталог програм" : "Розпочати роботу"}
                 </Button>
 
                 <Button
                   variant="outline"
                   size="lg"
-                  onClick={() => navigate("/about")}
+                  onClick={() => navigate("/archive")}
+                  className="font-mono text-xs uppercase tracking-wider px-6 py-3.5"
                 >
-                  Дізнатися більше
+                  Відкритий архів
                 </Button>
               </div>
 
-              <div className="pt-6 border-t border-border-color flex flex-wrap gap-6 text-xs font-mono text-text-muted">
+              <div className="pt-6 border-t border-border-color/60 flex flex-wrap gap-6 text-xs font-mono text-text-muted">
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-brand" />
-                  Верифікація за ЄДРПОУ
+                  <CheckCircle2 size={15} className="text-brand" />
+                  Верифікація установам за ЄДРПОУ
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-brand" />
+                  <CheckCircle2 size={15} className="text-brand" />
+                  Blind Peer Review
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 size={15} className="text-brand" />
                   GDPR стандарти
                 </span>
               </div>
             </ScrollReveal>
+
             <ScrollReveal
               variants={fadeInRight}
               delay={0.2}
               className="lg:col-span-5"
             >
-              <Card hoverable className="border-brand/30 bg-bg-secondary/80">
-                <div className="space-y-6 text-left">
+              <Card
+                hoverable
+                className="border-brand/30 bg-bg-secondary/90 backdrop-blur-md shadow-2xl relative overflow-hidden"
+              >
+                <div className="absolute -top-12 -right-12 w-32 h-32 bg-brand/20 rounded-full blur-2xl pointer-events-none" />
+
+                <div className="space-y-6 text-left relative z-10">
                   <div className="flex items-center justify-between pb-4 border-b border-border-color">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
-                        <ShieldCheck size={20} />
+                        <ShieldCheck size={22} />
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm text-text-primary font-mono">
-                          Екосистема рецензування
+                        <h4 className="font-bold text-sm text-text-primary font-mono uppercase tracking-wide">
+                          Smart Review Workflow
                         </h4>
-                        <p className="text-[11px] font-mono text-text-muted">
-                          Двостороння перевірка
-                        </p>
                       </div>
                     </div>
-                    <Badge status="success">Active</Badge>
+                    <Badge status="success">Active Core</Badge>
                   </div>
 
                   <div className="space-y-3">
                     <motion.div
                       whileHover={{ scale: 1.02 }}
-                      className="p-3 bg-bg-tertiary rounded-lg border border-border-color flex items-center justify-between transition-shadow"
+                      className="p-3.5 bg-bg-tertiary/70 rounded-xl border border-border-color flex items-center justify-between transition-all"
                     >
-                      <div className="flex items-center gap-2">
-                        <Search size={14} className="text-brand" />
+                      <div className="flex items-center gap-2.5">
+                        <Cpu size={16} className="text-brand shrink-0" />
                         <span className="text-xs font-semibold text-text-primary font-sans">
-                          Відкриті бази даних
+                          Балансування навантаження експертів
                         </span>
                       </div>
-                      <span className="font-mono text-xs text-brand font-bold">
-                        100%
+                      <span className="font-mono text-xs text-brand font-bold bg-brand/10 px-2 py-0.5 rounded border border-brand/20">
+                        Оптимально
                       </span>
                     </motion.div>
 
                     <motion.div
                       whileHover={{ scale: 1.02 }}
-                      className="p-3 bg-bg-tertiary rounded-lg border border-border-color flex items-center justify-between transition-shadow"
+                      className="p-3.5 bg-bg-tertiary/70 rounded-xl border border-border-color flex items-center justify-between transition-all"
                     >
-                      <div className="flex items-center gap-2">
-                        <Award size={14} className="text-brand" />
+                      <div className="flex items-center gap-2.5">
+                        <Lock size={16} className="text-brand shrink-0" />
                         <span className="text-xs font-semibold text-text-primary font-sans">
-                          Грантові програми
+                          Конфіденційність (Double-Blind)
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        100% PII Safe
+                      </span>
+                    </motion.div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="p-3.5 bg-bg-tertiary/70 rounded-xl border border-border-color flex items-center justify-between transition-all"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Award size={16} className="text-brand shrink-0" />
+                        <span className="text-xs font-semibold text-text-primary font-sans">
+                          Міжнародні стандарти
                         </span>
                       </div>
                       <span className="font-mono text-xs font-bold text-text-primary">
-                        Horizon Europe
+                        ERA / Horizon
                       </span>
                     </motion.div>
                   </div>
 
-                  <div className="p-4 bg-brand text-white rounded-lg space-y-1 shadow-md">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-white/80">
-                      Статус системи
+                  <div className="p-4 bg-gradient-to-r from-brand to-purple-600 text-white rounded-xl space-y-1 shadow-lg">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-white/80 font-bold block">
+                      Системний статус
                     </span>
                     <h5 className="text-xs font-bold font-mono">
-                      Науковий простір повністю активовано
+                      Екосистема відкритої науки працює в штатному режимі
                     </h5>
                   </div>
                 </div>
@@ -240,92 +294,245 @@ export default function HomePage() {
             </ScrollReveal>
           </div>
         </section>
-        <section className="max-w-7xl mx-auto w-full">
+
+        <section className="max-w-7xl mx-auto w-full px-4 lg:px-0">
+          <Card className="p-6 sm:p-8 bg-bg-secondary/80 border-border-color shadow-xl space-y-6 backdrop-blur-md">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex flex-col sm:flex-row items-center gap-3"
+            >
+              <div className="relative w-full flex-1">
+                <Search
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Введіть ключове слово, назву програми, тему або галузь..."
+                  className="w-full bg-bg-tertiary border border-border-color rounded-xl pl-11 pr-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all font-sans"
+                />
+              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                icon={Search}
+                className="w-full sm:w-auto font-mono text-xs uppercase tracking-wider shrink-0 py-3 px-6"
+              >
+                Знайти можливість
+              </Button>
+            </form>
+
+            <div className="flex flex-wrap items-center gap-2 pt-2 text-left">
+              <span className="text-xs font-mono font-bold text-text-muted uppercase tracking-wider mr-2">
+                Популярні галузі:
+              </span>
+              {POPULAR_DOMAINS.map((domainName) => (
+                <button
+                  key={domainName}
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      `/programs?domain=${encodeURIComponent(domainName)}`,
+                    )
+                  }
+                  className="px-3 py-1.5 rounded-lg bg-bg-tertiary hover:bg-brand/10 border border-border-color hover:border-brand/40 text-xs font-mono text-text-secondary hover:text-brand transition-all cursor-pointer"
+                >
+                  {domainName}
+                </button>
+              ))}
+            </div>
+          </Card>
+        </section>
+
+        <section className="max-w-7xl mx-auto w-full px-4 lg:px-0">
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
-            variants={staggerContainer(0.15)}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+            variants={staggerContainer(0.12)}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
           >
             <motion.div variants={staggerItem}>
               <AnalyticsCard
-                title="Активні можливості"
+                title="Активні конкурси"
                 value={`${totalPrograms}+`}
                 trend="+15%"
                 trendType="up"
-                description="Гранти, публікації в журналах та конференції"
+                description="Гранти, журнальні випуски та конференції"
               />
             </motion.div>
+
             <motion.div variants={staggerItem}>
               <AnalyticsCard
-                title="Зареєстровані ЗВО / НДІ"
+                title="Офіційні установи"
                 value={`${totalOrgs}+`}
                 trend="+8%"
                 trendType="up"
-                description="Офіційно підтверджені установи України"
+                description="Верифіковані ЗВО та НДІ України"
               />
             </motion.div>
+
             <motion.div variants={staggerItem}>
               <AnalyticsCard
-                title="Відкритий доступ (Open Access)"
+                title="Спеціальності"
+                value="20+"
+                trend="Розширено"
+                trendType="up"
+                description="Наукові напрями та галузі знань"
+              />
+            </motion.div>
+
+            <motion.div variants={staggerItem}>
+              <AnalyticsCard
+                title="Open Access Status"
                 value="100%"
                 trend="Стабільно"
                 trendType="up"
-                description="Публічні датасети та анотовані репозиторії"
+                description="Публічні датасети та відкриті рішення"
               />
             </motion.div>
           </motion.div>
         </section>
+
+        <section className="max-w-7xl mx-auto w-full px-4 lg:px-0 text-left space-y-8">
+          <div className="space-y-2">
+            <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest block">
+              // Архітектурні переваги
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black font-sans uppercase tracking-tight text-text-primary">
+              Інфраструктура нового покоління
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card
+              hoverable
+              className="p-6 bg-bg-secondary/80 border-border-color space-y-4 flex flex-col justify-between"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+                  <Globe2 size={20} />
+                </div>
+                <h3 className="text-lg font-bold font-sans text-text-primary">
+                  Єдиний реєстр публікацій
+                </h3>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Агрегація конкурсних грантів, журналів та наукових подій в
+                  єдиному місці із системою зручних фільтрів.
+                </p>
+              </div>
+              <Badge status="default" className="w-fit">
+                Open Access
+              </Badge>
+            </Card>
+
+            <Card
+              hoverable
+              className="p-6 bg-bg-secondary/80 border-border-color space-y-4 flex flex-col justify-between"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                  <ShieldCheck size={20} />
+                </div>
+                <h3 className="text-lg font-bold font-sans text-text-primary">
+                  Незалежна експертиза
+                </h3>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Автоматичний добір незалежних експертів за формулою балансу
+                  навантаження та спеціалізацією.
+                </p>
+              </div>
+              <Badge status="success" className="w-fit">
+                Double-Blind Review
+              </Badge>
+            </Card>
+
+            <Card
+              hoverable
+              className="p-6 bg-bg-secondary/80 border-border-color space-y-4 flex flex-col justify-between"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <Building2 size={20} />
+                </div>
+                <h3 className="text-lg font-bold font-sans text-text-primary">
+                  Кабінет ЗВО та НДІ
+                </h3>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Повноцінний інструмент адміністрування програм, прийняття
+                  матеріалів та проведення рецензування.
+                </p>
+              </div>
+              <Badge status="warning" className="w-fit">
+                ЄДРПОУ Verified
+              </Badge>
+            </Card>
+          </div>
+        </section>
+
         {organizations.length > 0 && (
           <ScrollReveal
             variants={fadeInUp}
-            className="max-w-7xl mx-auto w-full space-y-4 text-left"
+            className="max-w-7xl mx-auto w-full px-4 lg:px-0 space-y-4 text-left"
           >
-            <span className="text-xs font-mono uppercase text-text-muted tracking-widest font-bold">
-              // Партнерські установи та ЗВО
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase text-text-muted tracking-widest font-bold">
+                // Партнерські ЗВО та науково-дослідні інститути
+              </span>
+              <Link
+                to="/programs"
+                className="text-xs font-mono text-brand hover:underline flex items-center gap-1"
+              >
+                Переглянути всі <ChevronRight size={14} />
+              </Link>
+            </div>
 
-            <div className="p-6 bg-bg-secondary border border-border-color rounded-xl flex flex-wrap items-center justify-around gap-8">
+            <div className="p-6 bg-bg-secondary border border-border-color rounded-2xl flex flex-wrap items-center justify-around gap-8 shadow-inner">
               {organizations.map((org, idx) => (
                 <motion.div
                   key={org._id || idx}
-                  whileHover={{ scale: 1.08 }}
-                  className="flex items-center gap-2 font-mono text-xs font-bold text-text-muted hover:text-brand transition-colors cursor-pointer"
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => navigate(`/programs?org=${org._id}`)}
+                  className="flex items-center gap-2.5 font-mono text-xs font-bold text-text-muted hover:text-brand transition-colors cursor-pointer"
                 >
-                  <Building2 size={16} className="text-brand" />
+                  <Building2 size={16} className="text-brand shrink-0" />
                   <span>{org.name}</span>
                 </motion.div>
               ))}
             </div>
           </ScrollReveal>
         )}
+
         <ScrollReveal
           variants={fadeInUp}
-          className="max-w-7xl mx-auto w-full space-y-8 text-left"
+          className="max-w-7xl mx-auto w-full px-4 lg:px-0 space-y-8 text-left"
         >
           <div className="space-y-2">
-            <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
+            <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest block">
               // Дорожня карта
             </span>
-            <h2 className="text-2xl md:text-3xl font-black font-sans uppercase tracking-tight">
-              4 кроки від ідеї до фінансування
+            <h2 className="text-2xl sm:text-3xl font-black font-sans uppercase tracking-tight text-text-primary">
+              4 кроки від ідеї до публікації
             </h2>
           </div>
 
-          <Card className="p-8 bg-bg-secondary/60">
+          <Card className="p-6 sm:p-8 bg-bg-secondary/60 border-border-color shadow-lg">
             <Timeline steps={timelineSteps} />
           </Card>
         </ScrollReveal>
+
         <ScrollReveal
           variants={fadeInUp}
-          className="max-w-4xl mx-auto w-full space-y-8 text-left"
+          className="max-w-4xl mx-auto w-full px-4 lg:px-6 space-y-8 text-left"
         >
           <div className="text-center space-y-2">
-            <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest">
+            <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest block">
               // Запитання та відповіді
             </span>
-            <h2 className="text-2xl md:text-3xl font-black font-sans uppercase tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-black font-sans uppercase tracking-tight text-text-primary">
               Часті запитання
             </h2>
           </div>
@@ -338,6 +545,49 @@ export default function HomePage() {
             ))}
           </div>
         </ScrollReveal>
+
+        <section className="max-w-7xl mx-auto w-full px-4 lg:px-0">
+          <Card className="p-8 sm:p-12 bg-bg-secondary/80 border border-border-color rounded-3xl relative overflow-hidden shadow-xl text-left space-y-6 backdrop-blur-md">
+            <div className="absolute right-0 top-0 w-96 h-96 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="max-w-2xl space-y-4 relative z-10">
+              <Badge status="success" className="font-mono">
+                Join Open Science Platform
+              </Badge>
+              <h2 className="text-3xl sm:text-4xl font-black font-sans uppercase tracking-tight leading-tight text-text-primary">
+                Готові розкрити потенціал власних наукових розробок?
+              </h2>
+              <p className="text-sm font-medium text-text-secondary leading-relaxed">
+                Приєднуйтесь до відкритої спільноти українських дослідників,
+                подавайте заявки на конкурсні програми або реєструйте нову
+                установу.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 pt-2 relative z-10">
+              <Button
+                variant="primary"
+                size="lg"
+                icon={ArrowRight}
+                onClick={() =>
+                  navigate(isAuthenticated ? "/programs" : "/register")
+                }
+                className="font-mono text-xs uppercase tracking-wider px-8 py-4 shadow-lg shadow-brand/20"
+              >
+                {isAuthenticated ? "Каталог програм" : "Зареєструватися зараз"}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => navigate("/about")}
+                className="font-mono text-xs uppercase tracking-wider px-6 py-4"
+              >
+                Про платформу
+              </Button>
+            </div>
+          </Card>
+        </section>
       </main>
 
       <Footer />

@@ -3,6 +3,8 @@ const User = require("../models/User");
 const Program = require("../models/Program");
 const cloudinary = require("cloudinary").v2;
 const notificationService = require("./notificationService");
+const auditService = require("./auditService");
+const mongoose = require("mongoose");
 
 class ProjectService {
   async #deleteFileFromCloudinary(fileUrl) {
@@ -139,7 +141,6 @@ class ProjectService {
     const skip = (page - 1) * limit;
 
     const projects = await Project.find(query)
-      .populate("authorId", "name email image")
       .populate("programId", "title type deadline")
       .sort({ updatedAt: -1 })
       .skip(skip)
@@ -156,12 +157,12 @@ class ProjectService {
     };
   }
 
-  async submitReview(projectId, reviewerId, reviewData) {
+  async submitReview(projectId, reviewerId, reviewData, req = null) {
     const Review = require("../models/Review");
 
     const project = await Project.findById(projectId).populate(
       "programId",
-      "type title",
+      "type title organizationId",
     );
     if (!project) {
       const error = new Error("Проєкт не знайдено");
@@ -209,6 +210,7 @@ class ProjectService {
 
     await newReview.save();
 
+    const previousStatus = project.status;
     if (reviewData.status) project.status = reviewData.status;
 
     if (reviewData.status === "На доопрацюванні") {
@@ -222,6 +224,28 @@ class ProjectService {
     project.reviewerRecommendation = reviewData.recommendation || "";
 
     const savedProject = await project.save();
+
+    await auditService.log({
+      req,
+      action: "REVIEW_SUBMITTED",
+      category: "REVIEW",
+      severity: "info",
+      targetEntity: {
+        entityType: "Project",
+        entityId: savedProject._id,
+        entityName: savedProject.title,
+      },
+      payload: {
+        previousState: { status: previousStatus },
+        newState: {
+          status: savedProject.status,
+          reviewStatus: savedProject.reviewStatus,
+          totalScore,
+          recommendation: newReview.recommendation,
+        },
+      },
+      organizationId: project.programId?.organizationId || null,
+    });
 
     if (project.authorId) {
       try {
@@ -264,12 +288,16 @@ class ProjectService {
     const programIds = programs.map((p) => p._id);
 
     const query = this.#buildFilterQuery(filters);
+
+    delete query.organizationId;
+    delete query.organization;
+
     query.programId = { $in: programIds };
 
     const skip = (page - 1) * limit;
 
     const projects = await Project.find(query)
-      .populate("authorId", "name email")
+      .populate("authorId", "name email image")
       .populate("programId", "title type")
       .populate("reviewerId", "name email")
       .sort({ createdAt: -1 })
@@ -324,11 +352,6 @@ class ProjectService {
       throw error;
     }
 
-    const isAuthor =
-      currentUser &&
-      project.authorId &&
-      project.authorId._id.toString() === currentUser.id.toString();
-
     const isAssignedReviewer =
       currentUser &&
       project.reviewerId &&
@@ -367,7 +390,6 @@ class ProjectService {
     const limitNum = Math.max(1, parseInt(limit, 10) || 8);
     const skip = (pageNum - 1) * limitNum;
 
-    // 1. Дозволені типи для публічного репозиторію (все, крім Грантів)
     const allowedTypes = [
       "Науковий журнал",
       "Стаття",
@@ -376,19 +398,14 @@ class ProjectService {
       "Курс",
     ];
 
-    // Знаходимо всі ID програм, які НЕ є Грантами
     const validPrograms = await Program.find({
       type: { $in: allowedTypes },
     }).select("_id organizationId");
-    const validProgramIds = validPrograms.map((p) => p._id);
 
     const query = this.#buildFilterQuery(queryFilters);
 
-    // 2. Фільтр статусів та обмеження типів програм (виключає Гранти)
     query.status = { $in: ["Прийнято", "approved"] };
-    query.programId = { $in: validProgramIds };
 
-    // 3. Логіка рівнів доступу (Public vs Restricted)
     if (!currentUser) {
       query.$or = [
         { accessLevel: "public" },
@@ -435,7 +452,10 @@ class ProjectService {
     };
   }
 
-  async create(projectData) {
+  /**
+   * Створення нового проекту з авто-розподілом $k_r$
+   */
+  async create(projectData, req = null) {
     const program = await Program.findById(projectData.programId);
     if (!program) {
       const error = new Error("Наукову програму/грант не знайдено");
@@ -455,11 +475,18 @@ class ProjectService {
       throw error;
     }
 
+    const projectDomains =
+      typeof projectData.domain === "string"
+        ? projectData.domain.split(",").map((d) => d.trim())
+        : projectData.domain;
+
     const newProject = new Project({
       title: projectData.title,
       description: projectData.description,
       programTitle: program.title,
-      domain: projectData.domain || "Інше",
+      domain: Array.isArray(projectDomains)
+        ? projectDomains[0]
+        : projectData.domain || "Інше",
       authorId: projectData.authorId,
       programId: projectData.programId,
       metadata: projectData.metadata || {},
@@ -467,24 +494,22 @@ class ProjectService {
     });
 
     try {
-      // -----------------------------------------------------------------------
-      // ЕТАП 1: Фільтрація за бінарним предикатом (формування множини R*)
-      // -----------------------------------------------------------------------
       const validReviewers = await User.find({
         role: "reviewer",
         organizationId: program.organizationId,
         isBanned: false,
         isReviewerActive: true,
-        allowedDomains: newProject.domain,
+        allowedDomains: {
+          $in: Array.isArray(projectDomains)
+            ? projectDomains
+            : [projectData.domain],
+        },
         allowedTypes: program.type,
       }).select("_id name lastAssignedAt updatedAt");
 
       if (validReviewers && validReviewers.length > 0) {
         const reviewerIds = validReviewers.map((r) => r._id);
 
-        // ---------------------------------------------------------------------
-        // ЕТАП 2: Розрахунок операційного навантаження (kr) для кожного рецензента
-        // ---------------------------------------------------------------------
         const activeCounts = await Project.aggregate([
           {
             $match: {
@@ -515,7 +540,6 @@ class ProjectService {
             minKr = currentKr;
             selectedReviewer = reviewer;
           } else if (currentKr === minKr) {
-            // FIFO: порівнюємо часові мітки останнього призначення
             const timeA = new Date(
               selectedReviewer.lastAssignedAt ||
                 selectedReviewer.updatedAt ||
@@ -537,15 +561,8 @@ class ProjectService {
         await User.findByIdAndUpdate(selectedReviewer._id, {
           $set: { lastAssignedAt: new Date() },
         });
-
-        console.log(
-          `Проєкт "${newProject.title}" [галузь: ${newProject.domain}] призначено експерту: ${selectedReviewer.name} (kr = ${minKr})`,
-        );
       } else {
         newProject.reviewStatus = "Не призначено";
-        console.log(
-          `Рецензента для галузі "${newProject.domain}" та типу "${program.type}" у цій організації не знайдено.`,
-        );
       }
     } catch (err) {
       console.error(
@@ -555,6 +572,27 @@ class ProjectService {
     }
 
     const savedProject = await newProject.save();
+
+    await auditService.log({
+      req,
+      action: "PROJECT_SUBMITTED",
+      category: "PROJECT",
+      severity: "info",
+      targetEntity: {
+        entityType: "Project",
+        entityId: savedProject._id,
+        entityName: savedProject.title,
+      },
+      payload: {
+        newState: {
+          domain: savedProject.domain,
+          programId: savedProject.programId,
+          reviewStatus: savedProject.reviewStatus,
+          reviewerAssigned: Boolean(savedProject.reviewerId),
+        },
+      },
+      organizationId: program.organizationId || null,
+    });
 
     try {
       await notificationService.createNotification({
@@ -586,9 +624,10 @@ class ProjectService {
     return savedProject;
   }
 
-  // Фоновий / Тригерний процес авто-перепризначення невизначених проєктів
-  // Викликається при появі або зміні активності рецензента в організації, а також при видаленні рецензента
-  async reassignUnassignedProjects(organizationId) {
+  /**
+   * Фоновий процес авто-перерозподілу проєктів із черги "Не призначено"
+   */
+  async reassignUnassignedProjects(organizationId, req = null) {
     if (!organizationId) return;
 
     const orgPrograms = await Program.find({ organizationId }).select(
@@ -604,9 +643,7 @@ class ProjectService {
       status: "На розгляді",
     });
 
-    console.log(
-      `Знайдено ${unassignedProjects.length} проєктів для авто-перерозподілу.`,
-    );
+    let reassignedCount = 0;
 
     for (const proj of unassignedProjects) {
       const program = orgPrograms.find(
@@ -614,7 +651,6 @@ class ProjectService {
       );
       if (!program) continue;
 
-      // Підбираємо рецензента за нашим алгоритмом
       const validReviewers = await User.find({
         role: "reviewer",
         organizationId: organizationId,
@@ -667,6 +703,8 @@ class ProjectService {
         proj.reviewStatus = "В процесі";
         await proj.save();
 
+        reassignedCount++;
+
         await User.findByIdAndUpdate(selectedReviewer._id, {
           $set: { lastAssignedAt: new Date() },
         });
@@ -679,15 +717,25 @@ class ProjectService {
           link: `/reviewer/queue`,
           sendEmail: true,
         });
-
-        console.log(
-          `Проєкт "${proj.title}" успішно перепризначено рецензенту ${selectedReviewer.name}`,
-        );
       }
+    }
+
+    if (reassignedCount > 0) {
+      // 👈 АУДИТ ЗАПИС: Масове авто-перепризначення
+      await auditService.log({
+        req,
+        action: "PROJECTS_AUTO_REASSIGNED",
+        category: "PROJECT",
+        severity: "info",
+        payload: {
+          metadata: { count: reassignedCount, organizationId },
+        },
+        organizationId,
+      });
     }
   }
 
-  async update(id, updateData) {
+  async update(id, updateData, req = null) {
     const oldProject = await Project.findById(id);
     if (!oldProject) {
       const error = new Error("Проєкт не знайдено");
@@ -706,11 +754,12 @@ class ProjectService {
       throw error;
     }
 
-    if (
+    const isReassigned =
       updateData.reviewerId &&
       (!oldProject.reviewerId ||
-        oldProject.reviewerId.toString() !== updateData.reviewerId.toString())
-    ) {
+        oldProject.reviewerId.toString() !== updateData.reviewerId.toString());
+
+    if (isReassigned) {
       updateData.reviewStatus = "В процесі";
     }
 
@@ -720,11 +769,30 @@ class ProjectService {
       { new: true },
     );
 
-    if (
-      updateData.reviewerId &&
-      (!oldProject.reviewerId ||
-        oldProject.reviewerId.toString() !== updateData.reviewerId.toString())
-    ) {
+    await auditService.log({
+      req,
+      action: isReassigned ? "PROJECT_REASSIGNED_MANUALLY" : "PROJECT_UPDATED",
+      category: "PROJECT",
+      severity: isReassigned ? "warning" : "info",
+      targetEntity: {
+        entityType: "Project",
+        entityId: updatedProject._id,
+        entityName: updatedProject.title,
+      },
+      payload: {
+        previousState: {
+          reviewerId: oldProject.reviewerId,
+          status: oldProject.status,
+        },
+        newState: {
+          reviewerId: updatedProject.reviewerId,
+          status: updatedProject.status,
+          updatedFields: Object.keys(updateData),
+        },
+      },
+    });
+
+    if (isReassigned) {
       try {
         await notificationService.createNotification({
           recipientId: updateData.reviewerId,
@@ -754,7 +822,7 @@ class ProjectService {
     return updatedProject;
   }
 
-  async addVersion(id, fileData) {
+  async addVersion(id, fileData, req = null) {
     const updatedProject = await Project.findByIdAndUpdate(
       id,
       {
@@ -768,6 +836,24 @@ class ProjectService {
     )
       .populate("authorId", "name email image")
       .populate("programId", "title");
+
+    await auditService.log({
+      req,
+      action: "PROJECT_NEW_VERSION_UPLOADED",
+      category: "PROJECT",
+      severity: "info",
+      targetEntity: {
+        entityType: "Project",
+        entityId: updatedProject._id,
+        entityName: updatedProject.title,
+      },
+      payload: {
+        newState: {
+          versionCount: updatedProject.versions.length,
+          fileName: fileData.fileName,
+        },
+      },
+    });
 
     if (updatedProject && updatedProject.reviewerId) {
       try {
@@ -790,7 +876,7 @@ class ProjectService {
     return updatedProject;
   }
 
-  async delete(id) {
+  async delete(id, req = null) {
     const project = await Project.findById(id);
     if (!project) {
       const error = new Error("Проєкт не знайдено");
@@ -807,6 +893,18 @@ class ProjectService {
     }
 
     await Project.findByIdAndDelete(id);
+
+    await auditService.log({
+      req,
+      action: "PROJECT_DELETED",
+      category: "PROJECT",
+      severity: "critical",
+      targetEntity: {
+        entityType: "Project",
+        entityId: id,
+        entityName: project.title,
+      },
+    });
   }
 
   async handleProgramDeletion(programIds) {
@@ -827,9 +925,6 @@ class ProjectService {
         status: { $in: ["На розгляді", "Прийнято", "На доопрацюванні"] },
       },
       { $set: { programId: null } },
-    );
-    console.log(
-      "Успішно відв'язано активні та прийняті наукові праці, відхилені роботи очищено від файлів.",
     );
   }
 
@@ -854,10 +949,6 @@ class ProjectService {
     });
 
     await project.save({ validateBeforeSave: false });
-
-    console.log(
-      `Файли відхиленого проєкту "${project.title}" (${id}) видалено з Cloudinary. Картку збережено в базі.`,
-    );
   }
 }
 

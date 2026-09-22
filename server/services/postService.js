@@ -2,6 +2,7 @@ const Post = require("../models/Post");
 const Comment = require("../models/Comment");
 const cloudinary = require("cloudinary").v2;
 const notificationService = require("./notificationService");
+const auditService = require("./auditService");
 
 class PostService {
   async #deleteImageFromCloudinary(publicId) {
@@ -177,7 +178,7 @@ class PostService {
     };
   }
 
-  async create(authorId, postData, uploadedImages = []) {
+  async create(authorId, postData, uploadedImages = [], req = null) {
     const finalStatus = postData.status || "published";
     let isFeatured = postData.isFeatured || false;
 
@@ -203,10 +204,33 @@ class PostService {
       isFeatured,
     });
 
-    return await newPost.save();
+    const savedPost = await newPost.save();
+
+    await auditService.log({
+      req,
+      action: "POST_CREATED",
+      category: "SYSTEM",
+      severity: "info",
+      targetEntity: {
+        entityType: "Post",
+        entityId: savedPost._id,
+        entityName: savedPost.title,
+      },
+      payload: {
+        newState: {
+          category: savedPost.category,
+          status: savedPost.status,
+          domain: savedPost.domain,
+          isFeatured: savedPost.isFeatured,
+        },
+      },
+      organizationId: savedPost.organizationId || null,
+    });
+
+    return savedPost;
   }
 
-  async update(id, postData, newUploadedImages = []) {
+  async update(id, postData, newUploadedImages = [], req = null) {
     const currentPost = await Post.findById(id);
     if (!currentPost) {
       const error = new Error("Публікацію не знайдено");
@@ -244,6 +268,23 @@ class PostService {
       .populate("authorId", "name role")
       .populate("organizationId", "name logo");
 
+    await auditService.log({
+      req,
+      action: "POST_UPDATED",
+      category: "SYSTEM",
+      severity: oldStatus !== updatedPost.status ? "warning" : "info",
+      targetEntity: {
+        entityType: "Post",
+        entityId: updatedPost._id,
+        entityName: updatedPost.title,
+      },
+      payload: {
+        previousState: { status: oldStatus, title: currentPost.title },
+        newState: { status: updatedPost.status, title: updatedPost.title },
+      },
+      organizationId: updatedPost.organizationId || null,
+    });
+
     if (
       updateData.status &&
       updateData.status !== oldStatus &&
@@ -269,8 +310,8 @@ class PostService {
     return updatedPost;
   }
 
-  async delete(id) {
-    const post = await Post.findById(id).select("images");
+  async delete(id, req = null) {
+    const post = await Post.findById(id).select("images title organizationId");
     if (!post) {
       const error = new Error("Публікацію не знайдено");
       error.statusCode = 404;
@@ -286,8 +327,20 @@ class PostService {
     }
 
     await Comment.deleteMany({ postId: id });
-
     await Post.findByIdAndDelete(id);
+
+    await auditService.log({
+      req,
+      action: "POST_DELETED",
+      category: "SYSTEM",
+      severity: "warning",
+      targetEntity: {
+        entityType: "Post",
+        entityId: id,
+        entityName: post.title,
+      },
+      organizationId: post.organizationId || null,
+    });
   }
 }
 

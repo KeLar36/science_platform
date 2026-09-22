@@ -37,6 +37,26 @@ export const projectApi = {
     return res.data;
   },
 
+  getOrganizationProjects: async (orgId, filters = {}, page = 1, limit = 8) => {
+    const targetId =
+      typeof orgId === "object" ? orgId?._id || orgId?.id : orgId;
+
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...Object.fromEntries(
+        Object.entries(filters).filter(
+          ([_, value]) => value !== undefined && value !== null && value !== "",
+        ),
+      ),
+    });
+
+    const res = await axiosInstance.get(
+      `/projects/organization/${targetId}?${params.toString()}`,
+    );
+    return res.data;
+  },
+
   getMyProjects: async (filters = {}, page = 1, limit = 8) => {
     const params = new URLSearchParams({
       page: page.toString(),

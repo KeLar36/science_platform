@@ -7,18 +7,47 @@ import { useContentManager } from "@/features/content-manager/hooks/useContentMa
 
 export function useOrganizationDashboard(orgId) {
   const [orgData, setOrgData] = useState(null);
+
+  // УЧАСНИКИ ТА РЕЦЕНЗЕНТИ
   const [members, setMembers] = useState({
     items: [],
     totalPages: 1,
     currentPage: 1,
   });
+  const [orgReviewers, setOrgReviewers] = useState([]);
+
+  // ПРОГРАМИ
   const [programs, setPrograms] = useState([]);
+  const [programsPagination, setProgramsPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+  });
+
+  // НОВИНИ / ПОСТИ
   const [posts, setPosts] = useState([]);
+  const [postsPagination, setPostsPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+  });
+
+  // ПОДАНІ ПРОЄКТИ
   const [submittedProjects, setSubmittedProjects] = useState([]);
+  const [submittedProjectsPagination, setSubmittedProjectsPagination] =
+    useState({
+      currentPage: 1,
+      totalPages: 1,
+    });
+
+  // ЗАЯВКИ
   const [requests, setRequests] = useState([]);
+  const [requestsPagination, setRequestsPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+  });
 
   const [loadingOrg, setLoadingOrg] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [loadingReviewers, setLoadingReviewers] = useState(false);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingSubmittedProjects, setLoadingSubmittedProjects] =
@@ -52,7 +81,7 @@ export function useOrganizationDashboard(orgId) {
         setLoadingMembers(true);
         const res = await organizationApi.getUsers(orgId, page);
         setMembers({
-          items: res.items || [],
+          items: res.items || res.members || [],
           totalPages: res.totalPages || 1,
           currentPage: res.currentPage || page,
         });
@@ -65,13 +94,31 @@ export function useOrganizationDashboard(orgId) {
     [orgId],
   );
 
+  // 👈 Отримання рецензентів лише цієї організації
+  const fetchOrgReviewers = useCallback(async () => {
+    if (!orgId) return;
+    try {
+      setLoadingReviewers(true);
+      const res = await organizationApi.getReviewers(orgId);
+      setOrgReviewers(res || []);
+    } catch (err) {
+      console.error("Помилка завантаження рецензентів організації:", err);
+    } finally {
+      setLoadingReviewers(false);
+    }
+  }, [orgId]);
+
   const fetchPrograms = useCallback(
     async (page = 1) => {
       if (!orgId) return;
       try {
         setLoadingPrograms(true);
         const res = await programApi.getByOrganization(orgId, page);
-        setPrograms(res.items || res || []);
+        setPrograms(res.items || res.programs || res || []);
+        setProgramsPagination({
+          currentPage: res.currentPage || page,
+          totalPages: res.totalPages || 1,
+        });
       } catch (err) {
         console.error("Помилка завантаження програм:", err);
       } finally {
@@ -91,6 +138,10 @@ export function useOrganizationDashboard(orgId) {
           page,
         );
         setPosts(res.posts || res.items || []);
+        setPostsPagination({
+          currentPage: res.currentPage || page,
+          totalPages: res.totalPages || 1,
+        });
       } catch (err) {
         console.error("Помилка завантаження постів організації:", err);
       } finally {
@@ -103,12 +154,22 @@ export function useOrganizationDashboard(orgId) {
   const fetchSubmittedProjects = useCallback(
     async (page = 1) => {
       if (!orgId) return;
+      setLoadingSubmittedProjects(true);
       try {
-        setLoadingSubmittedProjects(true);
-        const data = await projectApi.getAll({ organizationId: orgId }, page);
-        setSubmittedProjects(data.projects || data.items || []);
-      } catch (err) {
-        console.error("Помилка завантаження поданих проєктів:", err);
+        const data = await projectApi.getOrganizationProjects(
+          orgId,
+          {},
+          page,
+          8,
+        );
+
+        setSubmittedProjects(data.projects || []);
+        setSubmittedProjectsPagination({
+          currentPage: data.currentPage || page || 1,
+          totalPages: data.totalPages || 1,
+        });
+      } catch (error) {
+        console.error("Помилка при завантаженні проєктів організації:", error);
       } finally {
         setLoadingSubmittedProjects(false);
       }
@@ -127,6 +188,10 @@ export function useOrganizationDashboard(orgId) {
           search,
         );
         setRequests(res.items || []);
+        setRequestsPagination({
+          currentPage: res.currentPage || page,
+          totalPages: res.totalPages || 1,
+        });
       } catch (err) {
         console.error("Помилка завантаження заявок:", err);
       } finally {
@@ -179,7 +244,11 @@ export function useOrganizationDashboard(orgId) {
         userId,
         roleData,
       );
-      await Promise.all([fetchMembers(), fetchSubmittedProjects()]);
+      await Promise.all([
+        fetchMembers(),
+        fetchOrgReviewers(),
+        fetchSubmittedProjects(),
+      ]);
       return { success: true, message: res.message };
     } catch (err) {
       console.error("Помилка зміни ролі учасника:", err);
@@ -335,13 +404,40 @@ export function useOrganizationDashboard(orgId) {
     try {
       setActionLoading(true);
       const res = await organizationApi.kickMember(orgId, targetUserId);
-      await Promise.all([fetchMembers(), fetchSubmittedProjects()]);
+      await Promise.all([
+        fetchMembers(),
+        fetchOrgReviewers(),
+        fetchSubmittedProjects(),
+      ]);
       return { success: true, message: res.message };
     } catch (err) {
       console.error("Помилка виключення користувача:", err);
       return {
         success: false,
         error: err.response?.data?.error || "Не вдалося виключити користувача",
+      };
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAssignReviewer = async (projectId, reviewerId) => {
+    try {
+      setActionLoading(true);
+      const updatedProject = await projectApi.assignReviewer(
+        projectId,
+        reviewerId,
+      );
+      await fetchSubmittedProjects(submittedProjectsPagination.currentPage);
+      return { success: true, data: updatedProject };
+    } catch (err) {
+      console.error("Помилка при ручному призначенні рецензента:", err);
+      return {
+        success: false,
+        error:
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Не вдалося призначити рецензента",
       };
     } finally {
       setActionLoading(false);
@@ -355,12 +451,18 @@ export function useOrganizationDashboard(orgId) {
       currentPage: members.currentPage || 1,
       totalPages: members.totalPages || 1,
     },
+    orgReviewers,
     programs,
+    programsPagination,
     posts,
+    postsPagination,
     submittedProjects,
+    submittedProjectsPagination,
     requests,
+    requestsPagination,
     loadingOrg,
     loadingMembers,
+    loadingReviewers,
     loadingPrograms,
     loadingPosts,
     loadingSubmittedProjects,
@@ -372,6 +474,7 @@ export function useOrganizationDashboard(orgId) {
     fetchOrgDetails,
     fetchPrograms,
     fetchMembers,
+    fetchOrgReviewers,
     fetchPosts,
     fetchSubmittedProjects,
     fetchPendingRequests,
@@ -385,5 +488,6 @@ export function useOrganizationDashboard(orgId) {
     handleUpdatePost,
     handleDeletePost,
     handleKickMember,
+    handleAssignReviewer,
   };
 }

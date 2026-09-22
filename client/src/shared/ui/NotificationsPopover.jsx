@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, CheckCheck, Trash2 } from "lucide-react";
+import { Bell, CheckCheck, Trash2, X } from "lucide-react";
 import NotificationCard from "@/shared/ui/NotificationCard";
 import Badge from "@/shared/ui/Badge";
 import Pagination from "@/shared/ui/Pagination";
@@ -46,13 +46,13 @@ export default function NotificationsPopover() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 md:w-96 rounded-xl border bg-bg-secondary border-border-color shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          <div className="p-3 border-b border-border-color flex justify-between items-center bg-bg-tertiary/40">
+        <div className="fixed inset-0 z-50 flex flex-col bg-bg-secondary border-0 rounded-none shadow-2xl animate-in fade-in zoom-in-95 duration-200 md:absolute md:inset-auto md:right-1 md:top-full md:mt-2 md:w-96 md:h-auto md:max-h-[85vh] md:rounded-xl md:border md:border-border-color overflow-hidden">
+          <div className="p-3 border-b border-border-color flex justify-between items-center bg-bg-tertiary/40 shrink-0">
             <span className="text-xs font-bold uppercase tracking-wider text-text-primary">
               Сповіщення {unreadCount > 0 && `(${unreadCount})`}
             </span>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
@@ -72,10 +72,19 @@ export default function NotificationsPopover() {
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
+
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-text-muted hover:text-text-primary transition-colors cursor-pointer md:hidden p-1 -mr-1"
+                title="Закрити"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
-          <div className="max-h-96 overflow-y-auto p-2 space-y-2">
+          {/* Основний список сповіщень */}
+          <div className="flex-1 overflow-y-auto p-2 space-y-2 md:max-h-96">
             {notifications.length === 0 ? (
               <div className="p-6 text-center text-xs text-text-muted font-mono">
                 Сповіщень немає
@@ -113,8 +122,9 @@ export default function NotificationsPopover() {
             )}
           </div>
 
+          {/* Пагінація */}
           {totalPages > 1 && (
-            <div className="p-2 border-t border-border-color bg-bg-tertiary/20">
+            <div className="p-2 border-t border-border-color bg-bg-tertiary/20 shrink-0">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}

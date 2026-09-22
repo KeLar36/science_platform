@@ -6,14 +6,6 @@ const checkOrgAccess = require("../middleware/checkOrgAccess");
 const upload = require("../middleware/upload");
 
 router.get("/public/list", organizationController.getPublicList);
-router.post(
-  "/create",
-  verifyToken,
-  upload.single("logo"),
-  organizationController.create,
-);
-router.post("/join", verifyToken, organizationController.joinRequest);
-router.post("/leave", verifyToken, organizationController.leave);
 
 router.get(
   "/all",
@@ -21,6 +13,16 @@ router.get(
   checkRole(["superadmin"]),
   organizationController.getAll,
 );
+
+router.post(
+  "/create",
+  verifyToken,
+  upload.single("logo"),
+  organizationController.create,
+);
+
+router.post("/join", verifyToken, organizationController.joinRequest);
+router.post("/leave", verifyToken, organizationController.leave);
 
 router.post(
   "/requests/accept/:userId",
@@ -85,6 +87,14 @@ router.patch(
   organizationController.updateStatus,
 );
 
+router.get(
+  "/:id/reviewers",
+  verifyToken,
+  checkOrgAccess,
+  checkRole(["admin", "superadmin"]),
+  organizationController.getOrganizationReviewers,
+);
+
 router.patch(
   "/:id/members/:userId/role",
   verifyToken,
@@ -108,13 +118,13 @@ router.patch(
   organizationController.update,
 );
 
-router.get("/:id", verifyToken, organizationController.getById);
-
 router.delete(
   "/:id",
   verifyToken,
   checkRole(["superadmin", "admin"]),
   organizationController.delete,
 );
+
+router.get("/:id", verifyToken, organizationController.getById);
 
 module.exports = router;

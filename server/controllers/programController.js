@@ -37,7 +37,7 @@ class ProgramController {
   async getPublicPrograms(req, res, next) {
     try {
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 8;
+      const limit = parseInt(req.query.limit) || 6;
 
       const filters = {
         active: true,

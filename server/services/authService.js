@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const notificationService = require("./notificationService");
+const auditService = require("./auditService");
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret_key";
 const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -26,12 +27,31 @@ const sendEmail = async (to, subject, text, html) => {
 };
 
 class AuthService {
-  async register(userData) {
+  async register(userData, req = null) {
     const { name, email, password, city, topics, bio } = userData;
     const sanitizedEmail = email.trim().toLowerCase();
 
     const userExists = await User.findOne({ email: sanitizedEmail });
     if (userExists) {
+      // Аудит невдалої спроби реєстрації (дублікат email)
+      await auditService.log({
+        req,
+        action: "USER_REGISTER_FAILED",
+        category: "AUTH",
+        severity: "warning",
+        targetEntity: {
+          entityType: "User",
+          entityId: null,
+          entityName: sanitizedEmail,
+        },
+        payload: {
+          metadata: {
+            reason: "Email вже зареєстровано",
+            email: sanitizedEmail,
+          },
+        },
+      });
+
       const error = new Error("Цей Email вже зареєстровано");
       error.statusCode = 400;
       throw error;
@@ -49,6 +69,25 @@ class AuthService {
 
     const savedUser = await user.save();
 
+    await auditService.log({
+      req,
+      action: "USER_REGISTER",
+      category: "AUTH",
+      severity: "info",
+      targetEntity: {
+        entityType: "User",
+        entityId: savedUser._id,
+        entityName: savedUser.name,
+      },
+      payload: {
+        newState: {
+          email: savedUser.email,
+          role: savedUser.role,
+          city: savedUser.city,
+        },
+      },
+    });
+
     try {
       await notificationService.createNotification({
         recipientId: savedUser._id,
@@ -64,16 +103,50 @@ class AuthService {
     return savedUser;
   }
 
-  async login(email, password) {
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
+  async login(email, password, req = null) {
+    const sanitizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: sanitizedEmail });
 
     if (!user) {
+      await auditService.log({
+        req,
+        action: "USER_LOGIN_FAILED",
+        category: "AUTH",
+        severity: "security",
+        targetEntity: {
+          entityType: "User",
+          entityId: null,
+          entityName: sanitizedEmail,
+        },
+        payload: {
+          metadata: {
+            reason: "Користувача не знайдено",
+            email: sanitizedEmail,
+          },
+        },
+      });
+
       const error = new Error("Користувача з таким Email не знайдено");
       error.statusCode = 400;
       throw error;
     }
 
     if (user.isBanned === true) {
+      await auditService.log({
+        req,
+        action: "USER_LOGIN_FAILED",
+        category: "AUTH",
+        severity: "security",
+        targetEntity: {
+          entityType: "User",
+          entityId: user._id,
+          entityName: user.name,
+        },
+        payload: {
+          metadata: { reason: "Спроба входу в заблокований акаунт" },
+        },
+      });
+
       const error = new Error("Ваш акаунт заблоковано");
       error.statusCode = 400;
       throw error;
@@ -81,6 +154,21 @@ class AuthService {
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      await auditService.log({
+        req,
+        action: "USER_LOGIN_FAILED",
+        category: "AUTH",
+        severity: "security",
+        targetEntity: {
+          entityType: "User",
+          entityId: user._id,
+          entityName: user.name,
+        },
+        payload: {
+          metadata: { reason: "Невірний пароль" },
+        },
+      });
+
       const error = new Error("Невірний пароль");
       error.statusCode = 400;
       throw error;
@@ -90,11 +178,29 @@ class AuthService {
       expiresIn: "30d",
     });
 
+    await auditService.log({
+      req,
+      action: "USER_LOGIN",
+      category: "AUTH",
+      severity: "info",
+      targetEntity: {
+        entityType: "User",
+        entityId: user._id,
+        entityName: user.name,
+      },
+      organizationId: user.organizationId || null,
+      payload: {
+        metadata: { role: user.role, email: user.email },
+      },
+    });
+
     return { token, user: { id: user._id, name: user.name, role: user.role } };
   }
 
-  async forgotPassword(email) {
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
+  async forgotPassword(email, req = null) {
+    const sanitizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: sanitizedEmail });
+
     if (!user) {
       const error = new Error("Користувача не знайдено");
       error.statusCode = 404;
@@ -105,6 +211,21 @@ class AuthService {
     user.resetPasswordToken = token;
     user.resetPasswordExpires = Date.now() + 3600000;
     await user.save();
+
+    await auditService.log({
+      req,
+      action: "PASSWORD_RESET_REQUESTED",
+      category: "AUTH",
+      severity: "warning",
+      targetEntity: {
+        entityType: "User",
+        entityId: user._id,
+        entityName: user.name,
+      },
+      payload: {
+        metadata: { email: user.email },
+      },
+    });
 
     const resetUrl = `${frontendUrl}/reset-password/${token}`;
 
@@ -170,7 +291,7 @@ class AuthService {
     );
   }
 
-  async resetPassword(token, newPassword) {
+  async resetPassword(token, newPassword, req = null) {
     const user = await User.findOne({
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: Date.now() },
@@ -186,6 +307,21 @@ class AuthService {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
+
+    await auditService.log({
+      req,
+      action: "PASSWORD_RESET_COMPLETED",
+      category: "AUTH",
+      severity: "security",
+      targetEntity: {
+        entityType: "User",
+        entityId: user._id,
+        entityName: user.name,
+      },
+      payload: {
+        metadata: { message: "Пароль успішно змінено через токен відновлення" },
+      },
+    });
 
     try {
       await notificationService.createNotification({

@@ -48,7 +48,7 @@ export function usePrograms(programId = null) {
         setLoading(true);
         const data = await programApi.getPublicList({
           page,
-          limit: 9,
+          limit: 6,
           search: debouncedSearch.trim() || undefined,
           type: selectedType !== "Всі типи" ? selectedType : undefined,
           domain: selectedDomain !== "Всі галузі" ? selectedDomain : undefined,

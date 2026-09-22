@@ -80,6 +80,11 @@ export const organizationApi = {
     return res.data;
   },
 
+  getReviewers: async (orgId) => {
+    const res = await axiosInstance.get(`/organizations/${orgId}/reviewers`);
+    return res.data;
+  },
+
   transferOwnership: async (orgId, newOwnerId) => {
     const res = await axiosInstance.patch(
       `/organizations/${orgId}/transfer-ownership`,

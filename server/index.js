@@ -75,6 +75,7 @@ app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/projects", require("./routes/projectRoutes"));
 app.use("/api/programs", require("./routes/programRoutes"));
@@ -83,9 +84,19 @@ app.use("/api/posts", require("./routes/postsRoutes"));
 app.use("/api/comments", require("./routes/commentRoutes"));
 app.use("/api/organizations", require("./routes/organizationRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
-app.use("/api/admin", require("./routes/superadminRoutes"));
+app.use("/api/superadmin", require("./routes/superadminRoutes"));
+app.use("/api/audit-logs", require("./routes/auditRoutes"));
+
 app.get("/", (req, res) => {
   res.send("Science Platform API is running...");
+});
+
+app.use((req, res, next) => {
+  const error = new Error(
+    `Запитуваний маршрут ${req.originalUrl} не знайдено.`,
+  );
+  error.statusCode = 404;
+  next(error);
 });
 
 app.use(errorHandler);

@@ -54,7 +54,7 @@ class OrganizationController {
   async getAll(req, res, next) {
     try {
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 8;
+      const limit = parseInt(req.query.limit) || 6;
 
       const filters = {
         status: req.query.status,
@@ -66,6 +66,25 @@ class OrganizationController {
 
       const result = await organizationService.getAll(filters, page, limit);
       res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getOrganizationReviewers(req, res, next) {
+    try {
+      res.setHeader(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, proxy-revalidate",
+      );
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+
+      const orgId = req.params.id || req.params.orgId;
+
+      const reviewers =
+        await organizationService.getOrganizationReviewers(orgId);
+      res.json(reviewers);
     } catch (err) {
       next(err);
     }
@@ -411,10 +430,7 @@ class OrganizationController {
         organization: updatedOrg,
       });
     } catch (err) {
-      if (typeof next === "function") return next(err);
-      return res
-        .status(500)
-        .json({ message: err.message || "Серверна помилка" });
+      next(err);
     }
   };
 
@@ -432,10 +448,7 @@ class OrganizationController {
         organization: updatedOrg,
       });
     } catch (err) {
-      if (typeof next === "function") return next(err);
-      return res
-        .status(500)
-        .json({ message: err.message || "Серверна помилка" });
+      next(err);
     }
   };
 

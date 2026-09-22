@@ -5,6 +5,7 @@ export function useProjects(
   initialFilters = {},
   limit = 8,
   isArchiveMode = false,
+  organizationId = null,
 ) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,55 +39,50 @@ export function useProjects(
       setLoading(true);
       setError(null);
       try {
-        if (isArchiveMode) {
-          // Передаємо фільтри та сторінку напряму на бекенд!
-          const data = await projectApi.getArchive(
-            currentFilters,
+        let data;
+        const apiFilters = {
+          search: currentFilters.search,
+          domain:
+            currentFilters.domain !== "Всі галузі"
+              ? currentFilters.domain
+              : undefined,
+          type:
+            currentFilters.type !== "Всі типи"
+              ? currentFilters.type
+              : undefined,
+          status:
+            currentFilters.status !== "Всі статуси"
+              ? currentFilters.status
+              : undefined,
+        };
+
+        if (organizationId) {
+          data = await projectApi.getOrganizationProjects(
+            organizationId,
+            apiFilters,
             pageToFetch,
             limit,
           );
-
-          let items = [];
-          if (Array.isArray(data)) {
-            items = data;
-          } else if (data && Array.isArray(data.projects)) {
-            items = data.projects;
-          }
-
-          setProjects(items);
-          setPagination({
-            currentPage: data?.currentPage || pageToFetch || 1,
-            totalPages: data?.totalPages || 1,
-            totalItems: data?.totalItems || items.length,
-          });
+        } else if (isArchiveMode) {
+          data = await projectApi.getArchive(apiFilters, pageToFetch, limit);
         } else {
-          const data = await projectApi.getAll(
-            {
-              search: currentFilters.search,
-              domain:
-                currentFilters.domain !== "Всі галузі"
-                  ? currentFilters.domain
-                  : undefined,
-              type:
-                currentFilters.type !== "Всі типи"
-                  ? currentFilters.type
-                  : undefined,
-              status:
-                currentFilters.status !== "Всі статуси"
-                  ? currentFilters.status
-                  : undefined,
-            },
-            pageToFetch,
-            limit,
-          );
-
-          setProjects(data.projects || []);
-          setPagination({
-            currentPage: data.currentPage || 1,
-            totalPages: data.totalPages || 1,
-            totalItems: data.totalItems || 0,
-          });
+          // Інакше викликаємо загальний getAll
+          data = await projectApi.getAll(apiFilters, pageToFetch, limit);
         }
+
+        let items = [];
+        if (Array.isArray(data)) {
+          items = data;
+        } else if (data && Array.isArray(data.projects)) {
+          items = data.projects;
+        }
+
+        setProjects(items);
+        setPagination({
+          currentPage: data?.currentPage || pageToFetch || 1,
+          totalPages: data?.totalPages || 1,
+          totalItems: data?.totalItems || items.length,
+        });
       } catch (err) {
         console.error("Помилка завантаження проєктів:", err);
         setError(
@@ -96,7 +92,7 @@ export function useProjects(
         setLoading(false);
       }
     },
-    [limit, isArchiveMode],
+    [organizationId, isArchiveMode, limit], // 👈 3. Додано в масив залежностей
   );
 
   useEffect(() => {

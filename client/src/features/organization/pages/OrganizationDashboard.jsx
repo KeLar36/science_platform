@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Mail, MapPin } from "lucide-react";
+import { Plus, Mail, MapPin, Shield } from "lucide-react";
 import Card from "@/shared/ui/Card";
 import Button from "@/shared/ui/Button";
 import Badge from "@/shared/ui/Badge";
@@ -23,6 +23,7 @@ import OrganizationPosts from "@/shared/lib/components/OrganizationPosts";
 import OrganizationSubmittedProjects from "@/shared/lib/components/OrganizationSubmittedProjects";
 import ProjectDetailModal from "@/features/projects/components/ProjectDetailModal";
 import ProjectChatModal from "@/features/projects/components/ProjectChatModal";
+import AuditLogTable from "@/features/audit/components/AuditLogTable";
 
 export default function OrganizationDashboard() {
   const { user } = useAuth();
@@ -31,10 +32,15 @@ export default function OrganizationDashboard() {
   const {
     orgData,
     members,
+    membersPagination,
     programs,
+    programsPagination,
     requests,
+    requestsPagination,
     posts = [],
+    postsPagination,
     submittedProjects = [],
+    submittedProjectsPagination,
     loadingOrg,
     loadingMembers,
     loadingPrograms,
@@ -58,6 +64,7 @@ export default function OrganizationDashboard() {
     handleDeleteProgram,
     handleDeletePost,
     handleKickMember,
+    handleAssignReviewer,
   } = useOrganizationDashboard(orgId);
 
   const [activeTab, setActiveTab] = useState("overview");
@@ -67,35 +74,59 @@ export default function OrganizationDashboard() {
   const [selectedProjectForDetail, setSelectedProjectForDetail] =
     useState(null);
   const [selectedProjectForChat, setSelectedProjectForChat] = useState(null);
+
   const isOrgAdmin = user?.role === "admin" || user?.role === "superadmin";
   const canManageContent = isOrgAdmin || user?.role === "content-manager";
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchOrgDetails();
+    if (orgId) {
+      fetchOrgDetails();
+    }
+  }, [orgId, fetchOrgDetails]);
+
+  useEffect(() => {
     if (!orgId) return;
 
-    if (activeTab === "members") {
-      fetchMembers();
-    } else if (activeTab === "programs") {
-      fetchPrograms();
-    } else if (activeTab === "requests" && isOrgAdmin) {
-      fetchPendingRequests();
-    } else if (activeTab === "posts" && canManageContent) {
-      fetchPosts?.();
-    } else if (activeTab === "submitted-projects" && isOrgAdmin) {
-      fetchSubmittedProjects?.();
+    if (activeTab === "members" && members.length === 0) {
+      fetchMembers(1);
+    } else if (activeTab === "programs" && programs.length === 0) {
+      fetchPrograms(1);
+    } else if (
+      activeTab === "requests" &&
+      isOrgAdmin &&
+      requests.length === 0
+    ) {
+      fetchPendingRequests(1);
+    } else if (
+      activeTab === "posts" &&
+      canManageContent &&
+      posts.length === 0
+    ) {
+      fetchPosts?.(1);
+    } else if (
+      activeTab === "submitted-projects" &&
+      isOrgAdmin &&
+      submittedProjects.length === 0
+    ) {
+      fetchSubmittedProjects?.(1);
+      if (members.length === 0) fetchMembers(1);
     }
   }, [
     orgId,
     activeTab,
     isOrgAdmin,
     canManageContent,
+    members.length,
+    programs.length,
+    requests.length,
+    posts.length,
+    submittedProjects.length,
     fetchMembers,
     fetchPrograms,
     fetchPendingRequests,
     fetchPosts,
     fetchSubmittedProjects,
-    fetchOrgDetails,
   ]);
 
   const breadcrumbItems = [
@@ -120,10 +151,11 @@ export default function OrganizationDashboard() {
           },
         ]
       : []),
+    ...(isOrgAdmin
+      ? [{ id: "audit", label: "Журнал аудиту", icon: Shield }]
+      : []),
     ...(isOrgAdmin ? [{ id: "settings", label: "Налаштування" }] : []),
   ];
-
-  const navigate = useNavigate();
 
   const handleStartCreatePost = () => {
     navigate(`/content-manager/posts/create?orgId=${orgId}`);
@@ -138,7 +170,7 @@ export default function OrganizationDashboard() {
     setActiveTab("create-program");
   };
 
-  if (loadingOrg) {
+  if (loadingOrg && !orgData) {
     return (
       <div className="max-w-7xl mx-auto p-4 space-y-4 mt-20">
         <Skeleton variant="rectangle" height="120px" />
@@ -227,6 +259,8 @@ export default function OrganizationDashboard() {
               setIsRoleModalOpen(true);
             }}
             onKickMember={handleKickMember}
+            currentPage={membersPagination?.currentPage || 1}
+            totalPages={membersPagination?.totalPages || 1}
             onPageChange={(p) => fetchMembers(p)}
           />
         )}
@@ -243,6 +277,8 @@ export default function OrganizationDashboard() {
             onEditClick={handleStartEditProgram}
             onToggleArchiveClick={handleToggleProgramStatus}
             onDeleteClick={handleDeleteProgram}
+            currentPage={programsPagination?.currentPage || 1}
+            totalPages={programsPagination?.totalPages || 1}
             onPageChange={(p) => fetchPrograms(p)}
           />
         )}
@@ -251,10 +287,15 @@ export default function OrganizationDashboard() {
           <OrganizationSubmittedProjects
             projects={submittedProjects}
             loading={loadingSubmittedProjects}
+            currentPage={submittedProjectsPagination?.currentPage || 1}
+            totalPages={submittedProjectsPagination?.totalPages || 1}
             onViewDetails={(project) => setSelectedProjectForDetail(project)}
             onOpenChat={(project) => setSelectedProjectForChat(project)}
             onReviewClick={(project) => setSelectedProjectForChat(project)}
             onPageChange={(p) => fetchSubmittedProjects(p)}
+            members={members}
+            onAssignReviewer={handleAssignReviewer}
+            orgId={orgId}
           />
         )}
 
@@ -266,6 +307,8 @@ export default function OrganizationDashboard() {
             onCreateClick={handleStartCreatePost}
             onEditClick={handleStartEditPost}
             onDeleteClick={handleDeletePost}
+            currentPage={postsPagination?.currentPage || 1}
+            totalPages={postsPagination?.totalPages || 1}
             onPageChange={(p) => fetchPosts(p)}
           />
         )}
@@ -296,8 +339,14 @@ export default function OrganizationDashboard() {
             actionLoading={actionLoading}
             onAccept={handleAcceptRequest}
             onReject={handleRejectRequest}
+            currentPage={requestsPagination?.currentPage || 1}
+            totalPages={requestsPagination?.totalPages || 1}
             onPageChange={(p) => fetchPendingRequests(p)}
           />
+        )}
+
+        {activeTab === "audit" && isOrgAdmin && (
+          <AuditLogTable initialFilters={{ organizationId: orgId }} />
         )}
 
         {activeTab === "settings" && isOrgAdmin && (
@@ -315,7 +364,7 @@ export default function OrganizationDashboard() {
             onClose={() => setIsRoleModalOpen(false)}
             member={selectedMember}
             orgId={orgId}
-            onSuccess={() => fetchMembers()}
+            onSuccess={() => fetchMembers(membersPagination.currentPage)}
           />
         )}
 

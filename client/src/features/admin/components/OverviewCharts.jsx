@@ -1,5 +1,5 @@
-import React from "react";
 import Card from "@/shared/ui/Card";
+import Badge from "@/shared/ui/Badge";
 import {
   BarChart,
   Bar,
@@ -12,7 +12,7 @@ import {
   Cell,
   CartesianGrid,
 } from "recharts";
-import { BarChart3, PieChart as PieIcon } from "lucide-react";
+import { BarChart3, PieChart as PieIcon, Award } from "lucide-react";
 
 const PIE_COLORS = ["#8b5cf6", "#6366f1", "#3b82f6", "#10b981", "#f59e0b"];
 
@@ -25,7 +25,7 @@ const formatDomainLabel = (label) => {
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-bg-secondary border border-border-color p-2.5 rounded-md shadow-2xl font-mono text-xs space-y-1 backdrop-blur-md">
+      <div className="bg-bg-secondary border border-border-color p-2.5 rounded-md shadow-2xl font-mono text-xs space-y-1 backdrop-blur-md z-50">
         <p className="text-text-muted text-[10px] uppercase tracking-wider font-bold">
           {label || payload[0].name}
         </p>
@@ -42,13 +42,14 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function OverviewCharts({
   domainData = [],
   programTypesData = [],
+  kpis = {},
 }) {
   const chartHeight = Math.max(280, domainData.length * 32);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-      <Card className="lg:col-span-2 p-6 bg-bg-secondary border-border-color space-y-4">
-        <div className="flex items-center justify-between">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+      <Card className="lg:col-span-2 p-6 bg-bg-secondary border-border-color h-full flex flex-col justify-between space-y-4">
+        <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-brand">
             <BarChart3 size={16} />
             <span>Розподіл праць за галузями</span>
@@ -58,9 +59,12 @@ export default function OverviewCharts({
           </span>
         </div>
 
-        <div className="w-full pt-2 overflow-y-auto max-h-[330px] custom-scrollbar">
+        <div className="w-full pt-2 flex-1 overflow-y-auto overflow-x-auto max-h-[460px] custom-scrollbar">
           {domainData.length > 0 ? (
-            <div style={{ height: `${chartHeight}px`, width: "100%" }}>
+            <div
+              style={{ height: `${chartHeight}px` }}
+              className="w-full min-w-[550px]"
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   layout="vertical"
@@ -88,7 +92,6 @@ export default function OverviewCharts({
                     stroke="#1e293b"
                     horizontal={false}
                   />
-                  {/* XAxis виступає як лічильник кількості */}
                   <XAxis
                     type="number"
                     stroke="#64748b"
@@ -98,7 +101,6 @@ export default function OverviewCharts({
                     axisLine={{ stroke: "#1e293b" }}
                     allowDecimals={false}
                   />
-                  {/* YAxis відображає назви галузей */}
                   <YAxis
                     type="category"
                     dataKey="domain"
@@ -109,7 +111,7 @@ export default function OverviewCharts({
                     axisLine={false}
                     width={160}
                     tickFormatter={formatDomainLabel}
-                    interval={0} // Повертає 100% усіх галузей без приховування
+                    interval={0}
                   />
                   <RechartsTooltip
                     content={<CustomTooltip />}
@@ -139,63 +141,93 @@ export default function OverviewCharts({
         </div>
       </Card>
 
-      <Card className="p-6 bg-bg-secondary border-border-color space-y-4">
-        <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-text-primary">
-          <PieIcon size={16} className="text-brand" />
-          <span>Структура наукових програм</span>
-        </div>
+      <div className="space-y-6 flex flex-col justify-between">
+        <Card className="p-6 bg-bg-secondary border-border-color space-y-4">
+          <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-text-primary">
+            <PieIcon size={16} className="text-brand" />
+            <span>Структура наукових програм</span>
+          </div>
 
-        <div className="h-44 w-full flex items-center justify-center">
-          {programTypesData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={programTypesData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={65}
-                  paddingAngle={4}
-                  dataKey="value"
-                  stroke="#090d16"
-                  strokeWidth={2}
-                >
-                  {programTypesData.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={PIE_COLORS[index % PIE_COLORS.length]}
-                      className="transition-all duration-200 outline-none hover:opacity-80"
-                    />
-                  ))}
-                </Pie>
-                <RechartsTooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="font-mono text-xs text-text-muted">Немає даних</div>
-          )}
-        </div>
-
-        <div className="space-y-2 border-t border-border-color/60 pt-3">
-          {programTypesData.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between text-[11px] font-mono"
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-2 h-2 rounded-sm"
-                  style={{
-                    backgroundColor: PIE_COLORS[idx % PIE_COLORS.length],
-                  }}
-                />
-                <span className="text-text-muted">{item.name || "Інше"}</span>
+          <div className="h-44 w-full flex items-center justify-center">
+            {programTypesData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={programTypesData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={65}
+                    paddingAngle={4}
+                    dataKey="value"
+                    stroke="#090d16"
+                    strokeWidth={2}
+                  >
+                    {programTypesData.map((_, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={PIE_COLORS[index % PIE_COLORS.length]}
+                        className="transition-all duration-200 outline-none hover:opacity-80"
+                      />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="font-mono text-xs text-text-muted">
+                Немає даних
               </div>
-              <span className="font-bold text-text-primary">{item.value}</span>
+            )}
+          </div>
+
+          <div className="space-y-2 border-t border-border-color/60 pt-3">
+            {programTypesData.map((item, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between text-[11px] font-mono"
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-sm"
+                    style={{
+                      backgroundColor: PIE_COLORS[idx % PIE_COLORS.length],
+                    }}
+                  />
+                  <span className="text-text-muted">{item.name || "Інше"}</span>
+                </div>
+                <span className="font-bold text-text-primary">
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-5 bg-bg-secondary border-border-color space-y-3">
+          <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-emerald-400">
+            <div className="flex items-center gap-2">
+              <Award size={16} />
+              <span>Експертна оцінка</span>
             </div>
-          ))}
-        </div>
-      </Card>
+            <Badge status="success">
+              {kpis.avgReviewScore ? `${kpis.avgReviewScore} / 5` : "N/A"}
+            </Badge>
+          </div>
+          <div className="flex justify-between items-center text-xs font-mono text-text-muted pt-1">
+            <span>Завершених рецензій:</span>
+            <span className="font-bold text-text-primary">
+              {kpis.completedReviewProjects || 0}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-xs font-mono text-text-muted">
+            <span>В процесі оцінювання:</span>
+            <span className="font-bold text-amber-500">
+              {kpis.inReviewProjects || 0}
+            </span>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

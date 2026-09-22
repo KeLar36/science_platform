@@ -77,14 +77,14 @@ export default function Navbar() {
             : "bg-transparent py-5"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-3 lg:px-0 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 lg:px-0 flex items-center justify-between">
           <Link
             href="/"
             variant="muted"
             onClick={closeMenu}
             className="flex flex-col leading-none select-none hover:text-text-primary transition-colors"
           >
-            <span className="text-sm font-black tracking-wider text-text-primary uppercase">
+            <span className="text-xs sm:text-sm font-black tracking-wider text-text-primary uppercase">
               Science
               <span className="text-brand font-black ml-0.5">Platform</span>
             </span>
@@ -110,7 +110,7 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden lg:flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <Toggle
                 checked={theme === "dark"}
                 onChange={toggleTheme}
@@ -126,7 +126,7 @@ export default function Navbar() {
                 <Dropdown
                   items={userDropdownItems}
                   trigger={() => (
-                    <div className="cursor-pointer hover:opacity-90 transition-opacity">
+                    <div className="hidden lg:block cursor-pointer hover:opacity-90 transition-opacity">
                       <Avatar src={user.image} name={user.name} size="md" />
                     </div>
                   )}

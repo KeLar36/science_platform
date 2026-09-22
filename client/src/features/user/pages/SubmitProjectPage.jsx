@@ -51,9 +51,31 @@ export default function SubmitProjectPage() {
   } = useSubmitProject(programIdParam, domainParam);
   useEffect(() => {
     if (currentProgramObj?.domain) {
-      setDomain(currentProgramObj.domain);
+      const rawDomain = currentProgramObj.domain;
+
+      // 1. Примусово перетворюємо в масив, якщо це рядок із комами або вже масив
+      let programDomains = [];
+      if (Array.isArray(rawDomain)) {
+        programDomains = rawDomain.map((d) => String(d).trim());
+      } else if (typeof rawDomain === "string") {
+        programDomains = rawDomain.split(",").map((d) => d.trim());
+      }
+
+      // 2. Шукаємо першу галузь, яка є в SCIENTIFIC_DOMAINS
+      const matchedDomain = programDomains.find((pDomain) =>
+        SCIENTIFIC_DOMAINS.includes(pDomain),
+      );
+
+      // 3. Гарантуємо, що в setDomain передається ТІЛЬКИ СКАЛЯРНИЙ РЯДОК (string)
+      if (matchedDomain) {
+        setDomain(String(matchedDomain));
+      } else if (programDomains.length > 0) {
+        setDomain(String(programDomains[0]));
+      } else {
+        setDomain("");
+      }
     } else if (domainParam && !domain) {
-      setDomain(domainParam);
+      setDomain(String(domainParam));
     }
   }, [currentProgramObj, domainParam, setDomain, domain]);
 

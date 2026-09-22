@@ -320,7 +320,7 @@ export default function CreateProgramForm({
           <label className="text-[10px] font-bold tracking-widest text-text-muted uppercase block">
             Повний опис / Умови прийому проєктів *
           </label>
-          <div className="quill-editor-wrapper bg-bg-primary border border-border-color rounded-lg overflow-hidden">
+          <div className="quill-editor-wrapper bg-bg-primary border border-border-color rounded-lg overflow-hidden h-50">
             <ReactQuill
               theme="snow"
               value={formData.description}

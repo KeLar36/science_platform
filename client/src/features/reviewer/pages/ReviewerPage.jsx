@@ -58,7 +58,7 @@ export default function ReviewerPage() {
         <div className="flex items-center justify-between gap-4 p-6 bg-bg-secondary/60 border border-border-color rounded-2xl text-left">
           <div className="space-y-1">
             <h1 className="text-xl font-black font-sans uppercase tracking-tight text-text-primary flex items-center gap-2">
-              <CheckSquare size={22} className="text-brand" /> Робочий стіл
+              <CheckSquare size={22} className="text-brand" /> Робоча зона
               рецензента
             </h1>
             <p className="text-xs font-mono text-text-muted">

@@ -34,7 +34,6 @@ export default function ReviewerCard({
       : null;
   const authorComment = latestVersion?.authorComment;
 
-  // Визначення, чи це архівний файл
   const fileName = latestVersion?.fileName || "";
   const ext = fileName.split(".").pop()?.toLowerCase() || "";
   const isArchive = ["zip", "rar", "7z", "tar"].includes(ext);
@@ -66,17 +65,15 @@ export default function ReviewerCard({
         <div>{getReviewStatusBadge()}</div>
       </div>
 
-      {/* Назва та короткий опис */}
       <div>
-        <h3 className="font-bold text-sm text-text-primary font-sans leading-snug mb-1">
+        <h3 className="font-bold text-md text-text-primary font-sans leading-snug my-3">
           {project.title}
         </h3>
-        <p className="text-xs text-text-muted line-clamp-2">
+        <p className="text-sm text-text-muted line-clamp-2 mb-3">
           {project.description}
         </p>
       </div>
 
-      {/* Інформація про автора та дату */}
       <div className="flex items-center justify-between gap-3 p-2.5 bg-bg-secondary rounded-lg border border-border-color text-xs">
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar

@@ -70,6 +70,7 @@ const UserSchema = new mongoose.Schema(
   },
 );
 
+UserSchema.index({ role: 1, isBanned: 1, allowedDomains: 1, allowedTypes: 1 });
 UserSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   try {

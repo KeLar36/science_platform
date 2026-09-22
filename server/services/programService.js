@@ -3,6 +3,7 @@ const User = require("../models/User");
 const Organization = require("../models/Organization");
 const Notification = require("../models/Notification");
 const projectService = require("./projectService");
+const auditService = require("./auditService");
 
 class ProgramService {
   getProgramModel() {
@@ -51,7 +52,6 @@ class ProgramService {
     const limitNum = Math.max(1, parseInt(limit, 10) || 8);
     const skip = (pageNum - 1) * limitNum;
 
-    // Паралельне виконання підрахунку та вибірки
     const [programs, total] = await Promise.all([
       ProgramModel.find(query)
         .populate("organizationId", "name logo isSystem")
@@ -114,7 +114,7 @@ class ProgramService {
     return program;
   }
 
-  async create(programData, type) {
+  async create(programData, type, req = null) {
     const ProgramModel = this.getProgramModel();
     const OrganizationModel = mongoose.model("Organization");
 
@@ -142,6 +142,27 @@ class ProgramService {
     const TargetModel = modelsMap[type] || ProgramModel;
     const newProgram = new TargetModel(programData);
     const savedProgram = await newProgram.save();
+
+    await auditService.log({
+      req,
+      action: "PROGRAM_CREATED",
+      category: "PROGRAM",
+      severity: "info",
+      targetEntity: {
+        entityType: "Program",
+        entityId: savedProgram._id,
+        entityName: savedProgram.title,
+      },
+      payload: {
+        newState: {
+          type: type || savedProgram.type,
+          deadline: savedProgram.deadline,
+          domain: savedProgram.domain,
+          active: savedProgram.active,
+        },
+      },
+      organizationId: savedProgram.organizationId || null,
+    });
 
     if (savedProgram.organizationId) {
       try {
@@ -174,7 +195,7 @@ class ProgramService {
     return savedProgram;
   }
 
-  async toggleStatus(programId, status) {
+  async toggleStatus(programId, status, req = null) {
     const ProgramModel = this.getProgramModel();
 
     const program = await ProgramModel.findById(programId);
@@ -184,6 +205,8 @@ class ProgramService {
       throw error;
     }
 
+    const previousStatus = program.active;
+
     if (status !== undefined) {
       program.active = status === "active" || status === true;
     } else {
@@ -191,6 +214,23 @@ class ProgramService {
     }
 
     await program.save();
+
+    await auditService.log({
+      req,
+      action: "PROGRAM_TOGGLED",
+      category: "PROGRAM",
+      severity: "warning",
+      targetEntity: {
+        entityType: "Program",
+        entityId: program._id,
+        entityName: program.title,
+      },
+      payload: {
+        previousState: { active: previousStatus },
+        newState: { active: program.active },
+      },
+      organizationId: program.organizationId || null,
+    });
 
     try {
       const ProjectModel = mongoose.model("Project");
@@ -225,22 +265,50 @@ class ProgramService {
     return program;
   }
 
-  async update(id, programData) {
+  async update(id, programData, req = null) {
     const ProgramModel = this.getProgramModel();
+    const currentProgram = await ProgramModel.findById(id);
+
+    if (!currentProgram) {
+      const error = new Error("Програму не знайдено");
+      error.statusCode = 404;
+      throw error;
+    }
+
     const updatedProgram = await ProgramModel.findByIdAndUpdate(
       id,
       { $set: programData },
       { new: true },
     );
-    if (!updatedProgram) {
-      const error = new Error("Програму не знайдено");
-      error.statusCode = 404;
-      throw error;
-    }
+
+    await auditService.log({
+      req,
+      action: "PROGRAM_UPDATED",
+      category: "PROGRAM",
+      severity: "info",
+      targetEntity: {
+        entityType: "Program",
+        entityId: updatedProgram._id,
+        entityName: updatedProgram.title,
+      },
+      payload: {
+        previousState: {
+          title: currentProgram.title,
+          deadline: currentProgram.deadline,
+        },
+        newState: {
+          title: updatedProgram.title,
+          deadline: updatedProgram.deadline,
+          updatedFields: Object.keys(programData),
+        },
+      },
+      organizationId: updatedProgram.organizationId || null,
+    });
+
     return updatedProgram;
   }
 
-  async delete(id) {
+  async delete(id, req = null) {
     const ProgramModel = this.getProgramModel();
     const program = await ProgramModel.findById(id);
 
@@ -252,10 +320,24 @@ class ProgramService {
 
     await projectService.handleProgramDeletion([id]);
     await ProgramModel.findByIdAndDelete(id);
+
+    await auditService.log({
+      req,
+      action: "PROGRAM_DELETED",
+      category: "PROGRAM",
+      severity: "critical",
+      targetEntity: {
+        entityType: "Program",
+        entityId: id,
+        entityName: program.title,
+      },
+      organizationId: program.organizationId || null,
+    });
+
     return program;
   }
 
-  async handleDeadlineReached(programId) {
+  async handleDeadlineReached(programId, req = null) {
     const ProgramModel = this.getProgramModel();
     const program = await ProgramModel.findById(programId);
 
@@ -263,6 +345,22 @@ class ProgramService {
 
     program.active = false;
     await program.save();
+
+    await auditService.log({
+      req,
+      action: "PROGRAM_DEADLINE_REACHED",
+      category: "PROGRAM",
+      severity: "warning",
+      targetEntity: {
+        entityType: "Program",
+        entityId: program._id,
+        entityName: program.title,
+      },
+      payload: {
+        metadata: { deadline: program.deadline, trigger: "SYSTEM_DEADLINE" },
+      },
+      organizationId: program.organizationId || null,
+    });
 
     const ProjectModel = mongoose.model("Project");
 
@@ -305,7 +403,7 @@ class ProgramService {
     }
   }
 
-  async finalCleanupAndClose(programId) {
+  async finalCleanupAndClose(programId, req = null) {
     const ProgramModel = this.getProgramModel();
     const program = await ProgramModel.findById(programId);
 
@@ -326,6 +424,22 @@ class ProgramService {
 
     program.active = false;
     await program.save();
+
+    await auditService.log({
+      req,
+      action: "PROGRAM_CLEANUP_AND_CLOSED",
+      category: "PROGRAM",
+      severity: "critical",
+      targetEntity: {
+        entityType: "Program",
+        entityId: program._id,
+        entityName: program.title,
+      },
+      payload: {
+        metadata: { cleanedNonApprovedCount: nonApprovedProjects.length },
+      },
+      organizationId: program.organizationId || null,
+    });
 
     try {
       const allProjects = await ProjectModel.find({ programId }).select(

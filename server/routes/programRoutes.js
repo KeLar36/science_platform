@@ -6,11 +6,11 @@ const checkOrgAccess = require("../middleware/checkOrgAccess");
 
 router.get("/", optionalToken, programController.getAll);
 router.get("/public", programController.getPublicPrograms);
+
 router.get(
   "/archive",
   verifyToken,
   checkRole(["admin", "superadmin"]),
-  checkOrgAccess,
   programController.getArchive,
 );
 

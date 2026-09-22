@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { UserCheck, Search, ShieldAlert, Award } from "lucide-react";
+import { UserCheck, Search } from "lucide-react";
 import Modal from "@/shared/ui/Modal";
 import Button from "@/shared/ui/Button";
 import Alert from "@/shared/ui/Alert";
 import Input from "@/shared/ui/Input";
 import Skeleton from "@/shared/ui/Skeleton";
+import { organizationApi } from "@/features/organization/api/organizationApi";
 import { adminApi } from "@/features/admin/api/adminApi";
+import { projectApi } from "@/features/projects/api/projectApi";
 
 export default function AssignReviewerModal({
   isOpen,
   onClose,
   project,
+  orgId,
+  isSuperAdmin = false,
   onSuccess,
 }) {
   const [reviewers, setReviewers] = useState([]);
@@ -20,17 +24,48 @@ export default function AssignReviewerModal({
   const [search, setSearch] = useState("");
   const [selectedReviewerId, setSelectedReviewerId] = useState("");
 
+  const extractId = (target) => {
+    if (!target) return null;
+    if (typeof target === "string") return target;
+    if (typeof target === "object") {
+      return (
+        target._id ||
+        target.id ||
+        target.organizationId?._id ||
+        target.organizationId ||
+        null
+      );
+    }
+    return null;
+  };
+
+  const targetOrgId =
+    extractId(orgId) ||
+    extractId(project?.organizationId) ||
+    extractId(project?.programId?.organizationId);
+
   useEffect(() => {
     if (isOpen) {
       const fetchReviewers = async () => {
         setLoading(true);
         setError(null);
         try {
-          const data = await adminApi.getAllUsers({
-            role: "reviewer",
-            limit: 50,
-          });
-          setReviewers(data.users || []);
+          let reviewersList = [];
+
+          if (isSuperAdmin || !targetOrgId) {
+            const data = await adminApi.getAllUsers({
+              role: "reviewer",
+              limit: 100,
+            });
+            reviewersList = data.users || data || [];
+          } else {
+            const data = await organizationApi.getReviewers(targetOrgId);
+            reviewersList = Array.isArray(data)
+              ? data
+              : data.reviewers || data.items || [];
+          }
+
+          setReviewers(reviewersList);
         } catch (err) {
           setError(
             err.response?.data?.message ||
@@ -43,7 +78,7 @@ export default function AssignReviewerModal({
 
       fetchReviewers();
     }
-  }, [isOpen]);
+  }, [isOpen, targetOrgId, isSuperAdmin]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,7 +90,7 @@ export default function AssignReviewerModal({
       setSubmitting(true);
       setError(null);
 
-      await adminApi.assignReviewer(project._id, selectedReviewerId);
+      await projectApi.assignReviewer(project._id, selectedReviewerId);
 
       onSuccess?.();
       onClose();
@@ -107,7 +142,9 @@ export default function AssignReviewerModal({
 
         <div className="space-y-2">
           <label className="text-[10px] font-mono font-bold uppercase text-text-muted">
-            Оберіть рецензента зі списку
+            {isSuperAdmin || !targetOrgId
+              ? "Оберіть рецензента із загальної бази"
+              : "Оберіть рецензента вашої організації"}
           </label>
           <Input
             placeholder="Шукати за ім'ям або email..."

@@ -59,20 +59,6 @@ export default function MobileMenu({
         </div>
 
         <div className="border-t border-border-color pt-4 space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1 justify-right px-2 py-1.5">
-              <Toggle
-                label={"Налаштуваня"}
-                checked={theme === "dark"}
-                onChange={toggleTheme}
-                iconOff={Moon}
-                iconOn={Sun}
-                size="md"
-              />
-            </div>
-            {user && <NotificationsPopover />}
-          </div>
-
           <div className="flex items-center justify-between pt-1">
             {user ? (
               <Link

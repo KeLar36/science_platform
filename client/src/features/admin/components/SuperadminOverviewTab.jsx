@@ -12,9 +12,9 @@ import {
   Sparkles,
   ShieldAlert,
   ArrowRight,
-  Plus,
   Send,
   Building2,
+  UserCheck,
 } from "lucide-react";
 
 export default function SuperadminOverviewTab({
@@ -22,7 +22,6 @@ export default function SuperadminOverviewTab({
   loading,
   onFetchAnalytics,
   onTabChange,
-  ц,
 }) {
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
 
@@ -31,6 +30,7 @@ export default function SuperadminOverviewTab({
   }, [onFetchAnalytics]);
 
   const kpis = analytics?.kpis || {};
+  const distributions = analytics?.distributions || {};
   const hasPendingOrgs = (kpis.pendingOrganizations || 0) > 0;
   const hasUnassignedProjects = (kpis.unassignedProjects || 0) > 0;
 
@@ -119,10 +119,12 @@ export default function SuperadminOverviewTab({
                 title="Дослідники"
                 value={kpis.totalUsers || 0}
                 trend={
-                  kpis.bannedUsers ? `${kpis.bannedUsers} забанено` : "Активні"
+                  kpis.activeReviewers
+                    ? `${kpis.activeReviewers} рецензентів`
+                    : "Активні"
                 }
-                trendType={kpis.bannedUsers ? "down" : "up"}
-                description="Користувачі платформи"
+                trendType="up"
+                description={`Забанено: ${kpis.bannedUsers || 0}`}
               />
             </div>
 
@@ -136,7 +138,7 @@ export default function SuperadminOverviewTab({
                 trend={
                   hasPendingOrgs
                     ? `+${kpis.pendingOrganizations} у черзі`
-                    : "Усі верифіковані"
+                    : `${kpis.verifiedOrganizations || 0} верифіковано`
                 }
                 trendType={hasPendingOrgs ? "down" : "up"}
                 description="Офіційні заклади та НДІ"
@@ -175,8 +177,14 @@ export default function SuperadminOverviewTab({
       </div>
 
       <OverviewCharts
-        domainData={analytics?.domainDistribution || []}
-        programTypesData={analytics?.programTypesDistribution || []}
+        domainData={
+          analytics?.domainDistribution || distributions?.domains || []
+        }
+        programTypesData={
+          analytics?.programTypesDistribution ||
+          distributions?.programTypes ||
+          []
+        }
         kpis={kpis}
       />
 
@@ -205,6 +213,16 @@ export default function SuperadminOverviewTab({
             className="font-mono text-xs uppercase tracking-wider"
           >
             Реєстр установ
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="md"
+            icon={UserCheck}
+            onClick={() => onTabChange?.("reviewers")}
+            className="font-mono text-xs uppercase tracking-wider"
+          >
+            Реєстр рецензентів
           </Button>
 
           <Button

@@ -21,7 +21,6 @@ const verifyToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-
     const userId = decoded.id || decoded._id;
     const freshUser = await User.findById(userId).select("-password").lean();
 
@@ -53,19 +52,27 @@ const optionalToken = async (req, res, next) => {
   const token = req.cookies ? req.cookies.token : null;
 
   if (!token) {
+    req.user = null;
     return next();
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const freshUser = await User.findById(decoded.id)
-      .select("-password")
-      .lean();
+    const userId = decoded.id || decoded._id;
+    const freshUser = await User.findById(userId).select("-password").lean();
 
     if (freshUser && !freshUser.isBanned) {
-      req.user = freshUser;
+      req.user = {
+        ...freshUser,
+        id: freshUser._id.toString(),
+        _id: freshUser._id,
+      };
+    } else {
+      req.user = null;
     }
-  } catch (err) {}
+  } catch (err) {
+    req.user = null;
+  }
   next();
 };
 
@@ -83,7 +90,6 @@ const checkRole = (roles) => {
 const canManageUser = async (req, res, next) => {
   try {
     const actorRole = req.user.role;
-    const actorId = req.user._id || req.user.id;
     const targetUserId = req.params.id;
 
     if (actorRole === "superadmin") return next();
@@ -107,12 +113,10 @@ const canManageUser = async (req, res, next) => {
     if (actorRole === "admin") {
       const currentUser = req.user;
 
-      if (
-        !currentUser.organizationId ||
-        !targetUser.organizationId ||
-        currentUser.organizationId.toString() !==
-          targetUser.organizationId.toString()
-      ) {
+      const actorOrg = String(currentUser.organizationId || "");
+      const targetOrg = String(targetUser.organizationId || "");
+
+      if (!actorOrg || !targetOrg || actorOrg !== targetOrg) {
         return res.status(403).json({
           error: "Заборонено: цей користувач не є членом вашої організації.",
         });

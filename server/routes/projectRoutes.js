@@ -16,6 +16,13 @@ router.get(
   checkRole(["reviewer", "admin", "superadmin"]),
   projectController.getReviewerQueue,
 );
+
+router.get(
+  "/organization/:orgId",
+  verifyToken,
+  projectController.getOrganizationProjects,
+);
+
 router.get("/:id", verifyToken, projectController.getById);
 router.get("/:id/review", verifyToken, projectController.getReview);
 

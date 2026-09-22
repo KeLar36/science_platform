@@ -30,24 +30,36 @@ class ProjectController {
           page,
           limit,
         );
-      } else if (req.user.role === "admin") {
-        if (!req.user.organizationId) {
-          return res.json({
-            projects: [],
-            totalPages: 1,
-            currentPage: page,
-            totalItems: 0,
-          });
-        }
-        result = await projectService.getOrganizationProjects(
-          req.user.organizationId,
-          filters,
-          page,
-          limit,
-        );
       } else {
         result = await projectService.getAll(filters, page, limit);
       }
+
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getOrganizationProjects(req, res, next) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 8;
+      const { orgId } = req.params;
+
+      const filters = {
+        search: req.query.search,
+        status: req.query.status,
+        domain: req.query.domain,
+        reviewStatus: req.query.reviewStatus,
+        programId: req.query.programId,
+      };
+
+      const result = await projectService.getOrganizationProjects(
+        orgId,
+        filters,
+        page,
+        limit,
+      );
 
       res.json(result);
     } catch (err) {

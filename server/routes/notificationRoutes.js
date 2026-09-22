@@ -10,10 +10,4 @@ router.patch("/read-all", notificationController.markAllAsRead);
 router.delete("/clear-all", notificationController.clearAllNotifications);
 router.patch("/:id/read", notificationController.markAsRead);
 
-router.post(
-  "/broadcast",
-  checkRole(["superadmin"]),
-  notificationController.sendBroadcast,
-);
-
 module.exports = router;

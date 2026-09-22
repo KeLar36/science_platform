@@ -5,6 +5,7 @@ const cloudinary = require("cloudinary").v2;
 const mongoose = require("mongoose");
 const notificationService = require("./notificationService");
 const projectService = require("./projectService");
+const auditService = require("./auditService");
 
 class UserService {
   async #deleteImageFromCloudinary(imageUrl) {
@@ -77,7 +78,7 @@ class UserService {
     );
   }
 
-  async anonymizeUser(userId) {
+  async anonymizeUser(userId, req = null) {
     const user = await User.findById(userId);
     if (!user) {
       const error = new Error("Користувача не знайдено");
@@ -113,6 +114,9 @@ class UserService {
       error.statusCode = 400;
       throw error;
     }
+
+    const oldName = user.name;
+    const oldEmail = user.email;
 
     await OrganizationModel.updateMany(
       { "joinRequests.userId": userId },
@@ -150,11 +154,29 @@ class UserService {
     }
 
     await user.save();
+
+    await auditService.log({
+      req,
+      action: "USER_ANONYMIZED_GDPR",
+      category: "USER",
+      severity: "critical",
+      targetEntity: {
+        entityType: "User",
+        entityId: user._id,
+        entityName: user.name,
+      },
+      payload: {
+        previousState: { name: oldName, email: oldEmail },
+        newState: { isAnonymized: true, isBanned: true },
+      },
+    });
+
     console.log(
       `Користувача ${userId} успішно анонімізовано за стандартами GDPR.`,
     );
     return user;
   }
+
   async getById(userId) {
     const user = await User.findById(userId).select("-password").lean();
 
@@ -167,9 +189,9 @@ class UserService {
     return user;
   }
 
-  async updateProfile(id, profileData) {
+  async updateProfile(id, profileData, req = null) {
     const currentUser = await User.findById(id).select(
-      "image organizationId role isReviewerActive",
+      "image organizationId role isReviewerActive name email",
     );
 
     if (
@@ -185,7 +207,7 @@ class UserService {
       if (
         !currentUser ||
         !currentUser.organizationId ||
-        currentUser.organizationId.toString() === "null"
+        String(currentUser.organizationId) === "null"
       ) {
         const error = new Error(
           "Не можна активувати статус рецензента без прив'язки до установи!",
@@ -202,6 +224,21 @@ class UserService {
     ).select("-password");
 
     if (!updatedUser) return null;
+
+    await auditService.log({
+      req,
+      action: "USER_PROFILE_UPDATED",
+      category: "USER",
+      severity: "info",
+      targetEntity: {
+        entityType: "User",
+        entityId: updatedUser._id,
+        entityName: updatedUser.name,
+      },
+      payload: {
+        newState: { updatedFields: Object.keys(profileData) },
+      },
+    });
 
     if (
       currentUser &&
@@ -235,7 +272,7 @@ class UserService {
       updatedUser.organizationId
     ) {
       projectService
-        .reassignUnassignedProjects(updatedUser.organizationId)
+        .reassignUnassignedProjects(updatedUser.organizationId, req)
         .catch((err) =>
           console.error(
             "Помилка авто-перерозподілу при активації профілю:",
@@ -286,13 +323,15 @@ class UserService {
     return await User.countDocuments(query);
   }
 
-  async updateRole(id, role, extraData = {}) {
+  async updateRole(id, role, extraData = {}, req = null) {
     const targetUser = await User.findById(id);
     if (!targetUser) {
       const error = new Error("Користувача не знайдено");
       error.statusCode = 404;
       throw error;
     }
+
+    const previousRole = targetUser.role;
 
     if (targetUser.role === "reviewer" && role !== "reviewer") {
       await this.#unassignReviewerProjects(id);
@@ -327,6 +366,22 @@ class UserService {
       overwriteDiscriminatorKey: true,
     });
 
+    await auditService.log({
+      req,
+      action: "USER_ROLE_CHANGED",
+      category: "USER",
+      severity: "warning",
+      targetEntity: {
+        entityType: "User",
+        entityId: updatedUser._id,
+        entityName: updatedUser.name,
+      },
+      payload: {
+        previousState: { role: previousRole },
+        newState: { role: updatedUser.role },
+      },
+    });
+
     try {
       await notificationService.createNotification({
         recipientId: id,
@@ -342,7 +397,7 @@ class UserService {
 
     if (role === "reviewer" && updatedUser.organizationId) {
       projectService
-        .reassignUnassignedProjects(updatedUser.organizationId)
+        .reassignUnassignedProjects(updatedUser.organizationId, req)
         .catch((err) =>
           console.error("Помилка авто-перерозподілу при зміні ролі:", err),
         );
@@ -351,7 +406,7 @@ class UserService {
     return updatedUser;
   }
 
-  async updateBanStatus(id, isBanned) {
+  async updateBanStatus(id, isBanned, req = null) {
     const user = await User.findById(id);
     if (!user) {
       const error = new Error("Користувача не знайдено");
@@ -366,6 +421,7 @@ class UserService {
       throw error;
     }
 
+    const previousBanStatus = user.isBanned;
     user.isBanned = isBanned;
     await user.save();
 
@@ -389,6 +445,22 @@ class UserService {
         `Авто-очищення: Усі активні роботи забаненого рецензента ${user.name} скинуто в чергу.`,
       );
     }
+
+    await auditService.log({
+      req,
+      action: isBanned ? "USER_BANNED" : "USER_UNBANNED",
+      category: "SECURITY",
+      severity: isBanned ? "warning" : "info",
+      targetEntity: {
+        entityType: "User",
+        entityId: user._id,
+        entityName: user.name,
+      },
+      payload: {
+        previousState: { isBanned: previousBanStatus },
+        newState: { isBanned: user.isBanned },
+      },
+    });
 
     try {
       const title = isBanned ? "Акаунт заблоковано" : "Акаунт розблоковано";

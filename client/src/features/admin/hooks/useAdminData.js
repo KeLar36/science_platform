@@ -17,13 +17,27 @@ export function useAdminData() {
     kpis: {
       totalUsers: 0,
       bannedUsers: 0,
+      activeReviewers: 0,
       pendingOrganizations: 0,
       approvedOrganizations: 0,
+      verifiedOrganizations: 0,
       activePrograms: 0,
       totalProjects: 0,
       unassignedProjects: 0,
+      inReviewProjects: 0,
+      completedReviewProjects: 0,
+      avgReviewScore: 0,
+    },
+    distributions: {
+      domains: [],
+      programTypes: [],
+      projectStatuses: [],
+      userRoles: [],
+      organizationTypes: [],
+      topCities: [],
     },
     domainDistribution: [],
+    programTypesDistribution: [],
     recentProjects: [],
   });
 
@@ -52,6 +66,7 @@ export function useAdminData() {
   });
 
   const fetchAnalytics = useCallback(async () => {
+    setLoading(true);
     setError(null);
     try {
       const data = await adminApi.getSuperadminAnalytics();
@@ -76,6 +91,9 @@ export function useAdminData() {
           totalItems: 0,
         },
       });
+      setProgramsPagination(
+        res.pagination || { currentPage: 1, totalPages: 1, totalItems: 0 },
+      );
     } catch (err) {
       console.error("Помилка завантаження програм:", err);
     } finally {
@@ -86,13 +104,14 @@ export function useAdminData() {
   const toggleProgramStatus = async (programId) => {
     try {
       const res = await adminApi.toggleProgramStatus(programId);
-      setProgramsData((prev) =>
-        prev.map((p) =>
+      setProgramsData((prev) => ({
+        ...prev,
+        programs: prev.programs.map((p) =>
           p._id === programId
             ? { ...p, active: res.program?.active ?? !p.active }
             : p,
         ),
-      );
+      }));
       return { success: true, message: res.message };
     } catch (err) {
       const msg =

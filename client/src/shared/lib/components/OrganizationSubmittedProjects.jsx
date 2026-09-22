@@ -6,6 +6,8 @@ import {
   ShieldCheck,
   Search,
   MessageSquare,
+  UserCheck,
+  UserPlus,
 } from "lucide-react";
 import Card from "@/shared/ui/Card";
 import Skeleton from "@/shared/ui/Skeleton";
@@ -17,20 +19,25 @@ import Input from "@/shared/ui/Input";
 import Select from "@/shared/ui/Select";
 import Pagination from "@/shared/ui/Pagination";
 import { Table, TableRow, TableCell } from "@/shared/ui/Table";
+import AssignReviewerModal from "@/features/admin/components/AssignReviewerModal";
 
 export default function OrganizationSubmittedProjects({
   projects = [],
   loading = false,
-  onReviewClick,
   onViewDetails,
   onOpenChat,
+  onReviewClick,
+  onAssignReviewerSuccess,
   currentPage = 1,
   totalPages = 1,
   onPageChange,
+  orgId,
 }) {
   const [feedback, setFeedback] = useState({ type: null, message: "" });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedProjectForAssign, setSelectedProjectForAssign] =
+    useState(null);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -75,10 +82,18 @@ export default function OrganizationSubmittedProjects({
     });
   }, [projects, search, statusFilter]);
 
+  const handleAssignSuccess = () => {
+    setFeedback({
+      type: "success",
+      message: "Рецензента успішно призначено до проєкту!",
+    });
+    onAssignReviewerSuccess?.();
+  };
+
   if (loading) return <Skeleton variant="rectangle" height="200px" />;
 
   return (
-    <div className="space-y-4 text-left">
+    <div className="space-y-4 text-left font-sans">
       {feedback.type && (
         <Alert
           variant={feedback.type}
@@ -127,6 +142,7 @@ export default function OrganizationSubmittedProjects({
             headers={[
               "Назва проєкту",
               "Автор",
+              "Рецензент",
               "Програма",
               "Дата подачі",
               "Статус",
@@ -135,6 +151,7 @@ export default function OrganizationSubmittedProjects({
           >
             {filteredProjects.map((item) => {
               const author = item.authorId || item.author;
+              const reviewer = item.reviewerId || item.reviewer;
               const program = item.programId || item.program;
 
               const isFinalStatus =
@@ -170,6 +187,24 @@ export default function OrganizationSubmittedProjects({
                         </div>
                       </div>
                     </div>
+                  </TableCell>
+
+                  <TableCell>
+                    {reviewer ? (
+                      <div className="flex items-center gap-1.5">
+                        <UserCheck
+                          size={14}
+                          className="text-status-success shrink-0"
+                        />
+                        <span className="text-xs font-mono text-text-primary">
+                          {reviewer.name || "Призначено"}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-mono text-text-muted italic">
+                        Не призначено
+                      </span>
+                    )}
                   </TableCell>
 
                   <TableCell>
@@ -209,6 +244,19 @@ export default function OrganizationSubmittedProjects({
                         />
                       )}
 
+                      {!isFinalStatus && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={UserPlus}
+                          onClick={() => setSelectedProjectForAssign(item)}
+                          className="text-xs"
+                          title="Призначити або змінити рецензента"
+                        >
+                          Рецензент
+                        </Button>
+                      )}
+
                       {onReviewClick && !isFinalStatus && (
                         <Button
                           variant="primary"
@@ -217,7 +265,7 @@ export default function OrganizationSubmittedProjects({
                           onClick={() => onReviewClick(item)}
                           className="text-xs"
                         >
-                          Рецензувати
+                          Затвердити
                         </Button>
                       )}
                     </div>
@@ -233,6 +281,16 @@ export default function OrganizationSubmittedProjects({
             onPageChange={onPageChange}
           />
         </>
+      )}
+
+      {selectedProjectForAssign && (
+        <AssignReviewerModal
+          isOpen={Boolean(selectedProjectForAssign)}
+          onClose={() => setSelectedProjectForAssign(null)}
+          project={selectedProjectForAssign}
+          orgId={orgId}
+          onSuccess={handleAssignSuccess}
+        />
       )}
     </div>
   );

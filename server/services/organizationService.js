@@ -6,6 +6,7 @@ const Post = require("../models/Post");
 const Comment = require("../models/Comment");
 const projectService = require("./projectService");
 const notificationService = require("./notificationService");
+const auditService = require("./auditService");
 const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
 
@@ -119,7 +120,7 @@ class OrganizationService {
     return list;
   }
 
-  async create(userId, data) {
+  async create(userId, data, req = null) {
     const cleanEdrpou = data.edrpou ? data.edrpou.trim() : "";
 
     const activeOrg = await Organization.findOne({
@@ -181,10 +182,31 @@ class OrganizationService {
     });
 
     this.clearCache();
+
+    await auditService.log({
+      req,
+      action: "ORG_CREATE_REQUESTED",
+      category: "ORGANIZATION",
+      severity: "info",
+      targetEntity: {
+        entityType: "Organization",
+        entityId: newOrg._id,
+        entityName: newOrg.name,
+      },
+      payload: {
+        newState: {
+          edrpou: newOrg.edrpou,
+          type: newOrg.type,
+          email: newOrg.email,
+        },
+      },
+      organizationId: newOrg._id,
+    });
+
     return newOrg;
   }
 
-  async requestToJoin(orgId, userId) {
+  async requestToJoin(orgId, userId, req = null) {
     const organization = await Organization.findById(orgId);
     if (!organization) {
       const error = new Error("Організацію не знайдено");
@@ -207,7 +229,7 @@ class OrganizationService {
     }
 
     const alreadyRequested = organization.joinRequests.some(
-      (req) => req.userId.toString() === userId.toString(),
+      (r) => r.userId.toString() === userId.toString(),
     );
     if (alreadyRequested) {
       const error = new Error(
@@ -227,6 +249,19 @@ class OrganizationService {
     organization.joinRequests.push({ userId });
     await organization.save();
 
+    await auditService.log({
+      req,
+      action: "ORG_JOIN_REQUESTED",
+      category: "ORGANIZATION",
+      severity: "info",
+      targetEntity: {
+        entityType: "Organization",
+        entityId: organization._id,
+        entityName: organization.name,
+      },
+      organizationId: organization._id,
+    });
+
     try {
       const applicant = await User.findById(userId).select("name");
       await notificationService.createNotification({
@@ -242,7 +277,7 @@ class OrganizationService {
     }
   }
 
-  async leaveOrganization(userId) {
+  async leaveOrganization(userId, req = null) {
     const user = await User.findById(userId);
     if (!user || !user.organizationId) {
       const error = new Error("Ви не перебуваєте в жодній установі");
@@ -259,6 +294,7 @@ class OrganizationService {
       throw error;
     }
 
+    const previousOrgId = user.organizationId;
     const originalRole = user.role;
     user.organizationId = null;
     user.role = "user";
@@ -271,6 +307,22 @@ class OrganizationService {
     }
 
     await user.save();
+
+    await auditService.log({
+      req,
+      action: "ORG_MEMBER_LEFT",
+      category: "ORGANIZATION",
+      severity: "warning",
+      targetEntity: {
+        entityType: "Organization",
+        entityId: previousOrgId,
+        entityName: org?.name || "Установа",
+      },
+      payload: {
+        previousState: { role: originalRole, organizationId: previousOrgId },
+      },
+      organizationId: previousOrgId,
+    });
   }
 
   async getOrganizationUsers(orgId, page = 1, limit = 8) {
@@ -322,7 +374,7 @@ class OrganizationService {
     };
   }
 
-  async update(orgId, updateData, file) {
+  async update(orgId, updateData, file, req = null) {
     const cleanOrgId = orgId?._id ? orgId._id.toString() : orgId?.toString();
 
     const org = await Organization.findById(cleanOrgId);
@@ -379,7 +431,7 @@ class OrganizationService {
             const cleaned = domains
               .map((d) => {
                 if (typeof d !== "string") return d;
-                return d.replace(/^[\["'\s]+|[\]"'\s]+$/g, "").trim();
+                return d.replace(/^[\["'\s]+\vert{}[\]"'\s]+$/g, "").trim();
               })
               .filter((d) => d && d !== "[]");
 
@@ -412,6 +464,28 @@ class OrganizationService {
     );
 
     this.clearCache();
+
+    await auditService.log({
+      req,
+      action: "ORG_PROFILE_UPDATED",
+      category: "ORGANIZATION",
+      severity: "info",
+      targetEntity: {
+        entityType: "Organization",
+        entityId: updatedOrg._id,
+        entityName: updatedOrg.name,
+      },
+      payload: {
+        previousState: { name: org.name, isVerified: org.isVerified },
+        newState: {
+          name: updatedOrg.name,
+          isVerified: updatedOrg.isVerified,
+          updatedFields: Object.keys(fieldsToUpdate),
+        },
+      },
+      organizationId: updatedOrg._id,
+    });
+
     return updatedOrg;
   }
 
@@ -487,7 +561,7 @@ class OrganizationService {
     };
   }
 
-  async acceptJoinRequest(orgId, userId) {
+  async acceptJoinRequest(orgId, userId, req = null) {
     const organization = await Organization.findById(orgId);
     if (!organization) {
       const error = new Error("Організацію не знайдено чи доступ обмежено");
@@ -496,7 +570,7 @@ class OrganizationService {
     }
 
     organization.joinRequests = organization.joinRequests.filter(
-      (req) => req.userId.toString() !== userId.toString(),
+      (r) => r.userId.toString() !== userId.toString(),
     );
 
     await organization.save();
@@ -509,6 +583,19 @@ class OrganizationService {
       }
       await user.save();
     }
+
+    await auditService.log({
+      req,
+      action: "ORG_JOIN_APPROVED",
+      category: "ORGANIZATION",
+      severity: "info",
+      targetEntity: {
+        entityType: "User",
+        entityId: userId,
+        entityName: user?.name || "Користувач",
+      },
+      organizationId: orgId,
+    });
 
     try {
       await notificationService.createNotification({
@@ -524,6 +611,7 @@ class OrganizationService {
         notifErr,
       );
     }
+
     if (user && user.role === "reviewer") {
       projectService
         .reassignUnassignedProjects(orgId)
@@ -536,7 +624,7 @@ class OrganizationService {
     }
   }
 
-  async rejectJoinRequest(orgId, userId) {
+  async rejectJoinRequest(orgId, userId, req = null) {
     const organization = await Organization.findById(orgId);
     if (!organization) {
       const error = new Error("Організацію не знайдено");
@@ -545,7 +633,7 @@ class OrganizationService {
     }
 
     organization.joinRequests = organization.joinRequests.filter(
-      (req) => req.userId.toString() !== userId.toString(),
+      (r) => r.userId.toString() !== userId.toString(),
     );
     await organization.save();
 
@@ -559,6 +647,19 @@ class OrganizationService {
       }
       await user.save();
     }
+
+    await auditService.log({
+      req,
+      action: "ORG_JOIN_REJECTED",
+      category: "ORGANIZATION",
+      severity: "info",
+      targetEntity: {
+        entityType: "User",
+        entityId: userId,
+        entityName: user?.name || "Користувач",
+      },
+      organizationId: orgId,
+    });
 
     try {
       await notificationService.createNotification({
@@ -575,7 +676,7 @@ class OrganizationService {
     }
   }
 
-  async kickMember(orgId, adminUser, targetUserId) {
+  async kickMember(orgId, adminUser, targetUserId, req = null) {
     if (!targetUserId) {
       const error = new Error("ID учасника не вказано");
       error.statusCode = 400;
@@ -591,7 +692,7 @@ class OrganizationService {
 
     const isSuperAdmin = adminUser.role === "superadmin";
     const creatorIdStr = org.creatorId ? org.creatorId.toString() : null;
-    const adminIdStr = (adminUser._id || adminUser.id)?.toString();
+    const adminIdStr = String(adminUser._id || adminUser.id || "");
     const targetUserIdStr = targetUserId.toString();
 
     const isCreator = creatorIdStr && creatorIdStr === adminIdStr;
@@ -627,6 +728,19 @@ class OrganizationService {
       await user.save();
     }
 
+    await auditService.log({
+      req,
+      action: "ORG_MEMBER_KICKED",
+      category: "ORGANIZATION",
+      severity: "warning",
+      targetEntity: {
+        entityType: "User",
+        entityId: targetUserId,
+        entityName: user?.name || "Учасник",
+      },
+      organizationId: orgId,
+    });
+
     try {
       await notificationService.createNotification({
         recipientId: targetUserId,
@@ -646,6 +760,7 @@ class OrganizationService {
     targetUserId,
     newRole,
     extraData = {},
+    req = null,
   ) {
     const cleanOrgId = orgId?._id ? orgId._id.toString() : orgId?.toString();
 
@@ -656,7 +771,7 @@ class OrganizationService {
       throw error;
     }
 
-    if (org.creatorId.toString() !== adminUserId.toString()) {
+    if (org.creatorId.toString() !== String(adminUserId)) {
       const error = new Error(
         "Тільки засновник організації може змінювати ролі учасників",
       );
@@ -678,6 +793,8 @@ class OrganizationService {
       throw error;
     }
 
+    const previousRole = targetUser.role;
+
     if (
       targetUser &&
       targetUser.role === "reviewer" &&
@@ -695,9 +812,6 @@ class OrganizationService {
             reviewStatus: "Не призначено",
           },
         },
-      );
-      console.log(
-        `Очищення черги: Активні проєкти користувача ${targetUserId} скинуто у статус "Не призначено".`,
       );
     }
 
@@ -745,6 +859,27 @@ class OrganizationService {
       delete updatedUser.isReviewerActive;
     }
 
+    await auditService.log({
+      req,
+      action: "USER_ROLE_UPDATED",
+      category: "USER_MGMT",
+      severity: "warning",
+      targetEntity: {
+        entityType: "User",
+        entityId: targetUserId,
+        entityName: targetUser.name,
+      },
+      payload: {
+        previousState: { role: previousRole },
+        newState: {
+          role: newRole,
+          allowedDomains: extraData.allowedDomains || [],
+          allowedTypes: extraData.allowedTypes || [],
+        },
+      },
+      organizationId: cleanOrgId,
+    });
+
     try {
       await notificationService.createNotification({
         recipientId: targetUserId,
@@ -761,7 +896,7 @@ class OrganizationService {
     return updatedUser;
   }
 
-  async transferOwnership(orgId, currentOwnerId, newOwnerId) {
+  async transferOwnership(orgId, currentOwnerId, newOwnerId, req = null) {
     const org = await Organization.findById(orgId);
     if (!org) {
       const error = new Error("Організацію не знайдено");
@@ -769,7 +904,7 @@ class OrganizationService {
       throw error;
     }
 
-    if (org.creatorId.toString() !== currentOwnerId.toString()) {
+    if (org.creatorId.toString() !== String(currentOwnerId)) {
       const error = new Error(
         "Тільки засновник організації може передати права власності!",
       );
@@ -805,6 +940,23 @@ class OrganizationService {
       await currentOwner.save();
     }
 
+    await auditService.log({
+      req,
+      action: "ORG_OWNERSHIP_TRANSFERRED",
+      category: "ORGANIZATION",
+      severity: "critical",
+      targetEntity: {
+        entityType: "Organization",
+        entityId: org._id,
+        entityName: org.name,
+      },
+      payload: {
+        previousState: { ownerId: currentOwnerId },
+        newState: { ownerId: newOwnerId },
+      },
+      organizationId: org._id,
+    });
+
     try {
       await notificationService.createNotification({
         recipientId: newOwnerId,
@@ -827,29 +979,61 @@ class OrganizationService {
         notifErr,
       );
     }
-
-    console.log(
-      `Права власності на організацію "${org.name}" успішно передано від ${currentOwnerId} до ${newOwnerId}`,
-    );
   }
 
-  async toggleVerified(id) {
+  async toggleVerified(id, req = null) {
     const org = await Organization.findById(id);
     if (!org) return null;
 
     org.isVerified = !org.isVerified;
-    return await org.save();
+    await org.save();
+
+    await auditService.log({
+      req,
+      action: "ORG_VERIFIED_TOGGLED",
+      category: "ORGANIZATION",
+      severity: "warning",
+      targetEntity: {
+        entityType: "Organization",
+        entityId: org._id,
+        entityName: org.name,
+      },
+      payload: {
+        newState: { isVerified: org.isVerified },
+      },
+      organizationId: org._id,
+    });
+
+    return org;
   }
 
-  async toggleFeatured(id) {
+  async toggleFeatured(id, req = null) {
     const org = await Organization.findById(id);
     if (!org) return null;
 
     org.isFeatured = !org.isFeatured;
-    return await org.save();
+    await org.save();
+
+    await auditService.log({
+      req,
+      action: "ORG_FEATURED_TOGGLED",
+      category: "ORGANIZATION",
+      severity: "info",
+      targetEntity: {
+        entityType: "Organization",
+        entityId: org._id,
+        entityName: org.name,
+      },
+      payload: {
+        newState: { isFeatured: org.isFeatured },
+      },
+      organizationId: org._id,
+    });
+
+    return org;
   }
 
-  async getAll(filters = {}, page = 1, limit = 8) {
+  async getAll(filters = {}, page = 1, limit = 6) {
     const query = this.#buildFilterQuery(filters);
     const skip = (page - 1) * limit;
 
@@ -865,7 +1049,7 @@ class OrganizationService {
     return { organizations, totalPages, currentPage: Number(page) };
   }
 
-  async updateStatus(id, status) {
+  async updateStatus(id, status, req = null) {
     const org = await Organization.findById(id);
     if (!org) {
       const error = new Error("Організацію не знайдено");
@@ -873,6 +1057,7 @@ class OrganizationService {
       throw error;
     }
 
+    const previousStatus = org.status;
     org.status = status;
     this.clearCache();
 
@@ -886,7 +1071,7 @@ class OrganizationService {
       }
       org.name = org.name.replace(/\s*\(Відхилено\)/g, "").trim();
 
-      const updatedUser = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         creatorUserId,
         {
           $set: {
@@ -903,10 +1088,6 @@ class OrganizationService {
           overwriteDiscriminatorKey: true,
         },
       );
-
-      if (updatedUser) {
-        console.log(`Роль засновника успішно змінено на ${updatedUser.role}!`);
-      }
 
       try {
         await notificationService.createNotification({
@@ -950,12 +1131,30 @@ class OrganizationService {
     }
 
     await org.save();
+
+    await auditService.log({
+      req,
+      action: status === "approved" ? "ORG_APPROVED" : "ORG_REJECTED",
+      category: "ORGANIZATION",
+      severity: "warning",
+      targetEntity: {
+        entityType: "Organization",
+        entityId: org._id,
+        entityName: org.name,
+      },
+      payload: {
+        previousState: { status: previousStatus },
+        newState: { status: org.status, isVerified: org.isVerified },
+      },
+      organizationId: org._id,
+    });
+
     return org;
   }
 
-  async deleteOrganization(orgId, requestUserId, userRole) {
+  async deleteOrganization(orgId, requestUserId, userRole, req = null) {
     const org = await Organization.findById(orgId).select(
-      "creatorId logo isSystem",
+      "creatorId logo isSystem name",
     );
     if (!org) {
       const error = new Error("Установу не знайдено");
@@ -979,10 +1178,6 @@ class OrganizationService {
       error.statusCode = 403;
       throw error;
     }
-
-    console.log(
-      `Початок глобального каскадного видалення установи ${orgId}...`,
-    );
 
     try {
       const orgMembers = await User.find({ organizationId: orgId }).select(
@@ -1034,10 +1229,6 @@ class OrganizationService {
         );
 
         await Program.deleteMany({ organizationId: orgId });
-
-        console.log(
-          `  ↳ Наукові програми (${programIds.length} од.) успішно ліквідовано.`,
-        );
       }
     } catch (err) {
       console.error(
@@ -1078,9 +1269,6 @@ class OrganizationService {
           runValidators: true,
         },
       );
-      console.log(
-        "  ↳ Усіх членів установи звільнено, роль засновника скинуто на 'user'.",
-      );
     } catch (err) {
       console.error("Помилка при скиданні зв'язків користувачів:", err);
     }
@@ -1091,10 +1279,44 @@ class OrganizationService {
       await this.#deleteImageFromCloudinary(org.logo);
     }
 
+    await auditService.log({
+      req,
+      action: "ORG_DELETED",
+      category: "ORGANIZATION",
+      severity: "critical",
+      targetEntity: {
+        entityType: "Organization",
+        entityId: org._id,
+        entityName: org.name,
+      },
+      payload: {
+        metadata: { deletedByRole: userRole },
+      },
+      organizationId: org._id,
+    });
+
     await Organization.findByIdAndDelete(orgId);
-    console.log(
-      `Установу ${orgId} повністю та безповоротно видалено з системи!`,
+  }
+
+  async getOrganizationReviewers(organizationId) {
+    const User = mongoose.model("User");
+
+    const orgStr = String(organizationId);
+    let orgObjId = null;
+    if (mongoose.Types.ObjectId.isValid(orgStr)) {
+      orgObjId = new mongoose.Types.ObjectId(orgStr);
+    }
+
+    const reviewers = await User.find({
+      organizationId: { $in: [orgStr, orgObjId] },
+      role: "reviewer",
+      isBanned: false,
+      isReviewerActive: { $ne: false },
+    }).select(
+      "_id name email academicDegree allowedDomains allowedTypes isReviewerActive image",
     );
+
+    return reviewers;
   }
 }
 

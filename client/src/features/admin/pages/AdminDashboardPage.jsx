@@ -16,6 +16,7 @@ import {
   FileText,
   Users,
   UserCheck,
+  Shield,
 } from "lucide-react";
 
 import SuperadminOverviewTab from "@/features/admin/components/SuperadminOverviewTab";
@@ -25,6 +26,7 @@ import SuperadminOrganizationsTab from "@/features/admin/components/SuperadminOr
 import SuperadminProjectsTab from "@/features/admin/components/SuperadminProjectsTab";
 import SuperadminUsersTab from "@/features/admin/components/SuperadminUsersTab";
 import SuperadminReviewersTab from "@/features/admin/components/SuperadminReviewersTab";
+import AuditLogTable from "@/features/audit/components/AuditLogTable";
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -60,6 +62,7 @@ export default function AdminDashboardPage() {
     { id: "projects", label: "Праці", icon: FileText },
     { id: "users", label: "Користувачі", icon: Users },
     { id: "reviewers", label: "Рецензенти", icon: UserCheck },
+    { id: "audit", label: "Аудит", icon: Shield },
     { id: "danger_zone", label: "🚨 Danger Zone" },
   ];
 
@@ -70,6 +73,7 @@ export default function AdminDashboardPage() {
     "projects",
     "users",
     "reviewers",
+    "audit",
     "danger_zone",
   ].includes(activeTab);
 
@@ -135,6 +139,8 @@ export default function AdminDashboardPage() {
         {activeTab === "users" && <SuperadminUsersTab />}
 
         {activeTab === "reviewers" && <SuperadminReviewersTab />}
+
+        {activeTab === "audit" && <AuditLogTable />}
 
         {activeTab === "danger_zone" && <SuperadminDangerZoneTab />}
 

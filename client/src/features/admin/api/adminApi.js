@@ -63,7 +63,7 @@ export const adminApi = {
   },
 
   getPrograms: async (params = {}) => {
-    const res = await axiosInstance.get("/admin/programs", { params });
+    const res = await axiosInstance.get("/superadmin/programs", { params });
     return res.data;
   },
   createProgram: async (programData) => {
@@ -96,12 +96,12 @@ export const adminApi = {
     return res.data;
   },
   getSuperadminAnalytics: async () => {
-    const res = await axiosInstance.get("/admin/analytics");
+    const res = await axiosInstance.get("/superadmin/analytics");
     return res.data;
   },
 
   sendBroadcast: async (payload) => {
-    const res = await axiosInstance.post("/admin/broadcast", payload);
+    const res = await axiosInstance.post("/superadmin/broadcast", payload);
     return res.data;
   },
 };
