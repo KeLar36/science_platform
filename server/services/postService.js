@@ -17,29 +17,31 @@ class PostService {
   #buildFilterQuery(filters = {}) {
     const query = {};
 
-    if (filters.status && filters.status !== "Всі") {
+    if (filters.status) {
       query.status = filters.status;
+    }
+
+    if (filters.organizationId && filters.organizationId !== "null") {
+      query.organizationId = filters.organizationId;
+    } else if (
+      filters.organizationId === "null" ||
+      filters.isMainBlog === "true"
+    ) {
+      query.$or = [
+        { organizationId: { $exists: false } },
+        { organizationId: null },
+      ];
     }
 
     if (filters.category && filters.category !== "Всі") {
       query.category = filters.category;
     }
 
-    if (filters.domain && filters.domain !== "Всі") {
-      query.domain = filters.domain;
-    }
-
-    if (filters.search && filters.search.trim()) {
-      const searchRegex = { $regex: filters.search.trim(), $options: "i" };
-      query.$or = [{ title: searchRegex }, { content: searchRegex }];
-    }
-
-    if (filters.organizationId) {
-      query.organizationId = filters.organizationId;
-    }
-
-    if (filters.authorId) {
-      query.authorId = filters.authorId;
+    if (filters.search) {
+      query.$or = [
+        { title: { $regex: filters.search, $options: "i" } },
+        { content: { $regex: filters.search, $options: "i" } },
+      ];
     }
 
     return query;

@@ -166,6 +166,7 @@ class OrganizationController {
       const newOrg = await organizationService.create(
         req.user.id,
         organizationData,
+        req,
       );
       res.status(201).json(newOrg);
     } catch (err) {
@@ -181,6 +182,7 @@ class OrganizationController {
         id,
         req.body,
         req.file,
+        req,
       );
 
       res.json({
@@ -202,6 +204,7 @@ class OrganizationController {
       const updatedOrg = await organizationService.updateStatus(
         req.params.id,
         status,
+        req,
       );
       res.json(updatedOrg);
     } catch (err) {
@@ -215,7 +218,9 @@ class OrganizationController {
       if (!organizationId) {
         return res.status(400).json({ error: "ID установи не передано" });
       }
-      await organizationService.requestToJoin(organizationId, req.user.id);
+
+      // Передаємо req для ORG_JOIN_REQUESTED
+      await organizationService.requestToJoin(organizationId, req.user.id, req);
       res.json({ message: "Запит на вступ успішно надіслано" });
     } catch (err) {
       next(err);
@@ -243,7 +248,7 @@ class OrganizationController {
         });
       }
 
-      await organizationService.acceptJoinRequest(adminOrgId, userId);
+      await organizationService.acceptJoinRequest(adminOrgId, userId, req);
       res.json({ message: "Користувача успішно зараховано до установи" });
     } catch (err) {
       next(err);
@@ -271,7 +276,7 @@ class OrganizationController {
         });
       }
 
-      await organizationService.rejectJoinRequest(adminOrgId, userId);
+      await organizationService.rejectJoinRequest(adminOrgId, userId, req);
       res.json({ message: "Запит на вступ відхилено" });
     } catch (err) {
       next(err);
@@ -314,7 +319,7 @@ class OrganizationController {
 
   async leave(req, res, next) {
     try {
-      await organizationService.leaveOrganization(req.user.id);
+      await organizationService.leaveOrganization(req.user.id, req);
       res.json({ message: "Ви успішно вийшли зі складу наукової установи" });
     } catch (err) {
       next(err);
@@ -343,7 +348,12 @@ class OrganizationController {
           .json({ error: "Ви не належите до жодної установи" });
       }
 
-      await organizationService.kickMember(adminOrgId, req.user, targetUserId);
+      await organizationService.kickMember(
+        adminOrgId,
+        req.user,
+        targetUserId,
+        req,
+      );
 
       res.json({ message: "Користувача успішно виключено з організації" });
     } catch (err) {
@@ -382,6 +392,7 @@ class OrganizationController {
           allowedDomains,
           allowedTypes,
         },
+        req,
       );
 
       res.json({
@@ -408,6 +419,7 @@ class OrganizationController {
         orgId,
         req.user.id,
         newOwnerId,
+        req,
       );
 
       res.json({ message: "Права власності на установу успішно передано!" });
@@ -416,10 +428,11 @@ class OrganizationController {
     }
   }
 
-  toggleVerified = async (req, res, next) => {
+  async toggleVerified(req, res, next) {
     try {
       const updatedOrg = await organizationService.toggleVerified(
         req.params.id,
+        req,
       );
       if (!updatedOrg) {
         return res.status(404).json({ message: "Установу не знайдено" });
@@ -432,12 +445,13 @@ class OrganizationController {
     } catch (err) {
       next(err);
     }
-  };
+  }
 
-  toggleFeatured = async (req, res, next) => {
+  async toggleFeatured(req, res, next) {
     try {
       const updatedOrg = await organizationService.toggleFeatured(
         req.params.id,
+        req,
       );
       if (!updatedOrg) {
         return res.status(404).json({ message: "Установу не знайдено" });
@@ -450,7 +464,7 @@ class OrganizationController {
     } catch (err) {
       next(err);
     }
-  };
+  }
 
   async delete(req, res, next) {
     try {
@@ -458,6 +472,7 @@ class OrganizationController {
         req.params.id,
         req.user.id,
         req.user.role,
+        req,
       );
       res.json({ message: "Організацію успішно видалено" });
     } catch (err) {

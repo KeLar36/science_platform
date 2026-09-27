@@ -2,11 +2,21 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { programApi } from "@/features/programs/api/programApi";
 import { organizationApi } from "@/features/organization/api/organizationApi";
 
+function getAdaptiveLimit() {
+  if (typeof window === "undefined") return 6;
+  const width = window.innerWidth;
+
+  if (width < 640) return 6; // Мобілка (1 колонка)
+  if (width < 1024) return 12; // Планшет (2-3 колонки)
+  return 18; // Десктоп (3-6 колонок)
+}
+
 export function usePrograms(programId = null) {
   const [items, setItems] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(getAdaptiveLimit);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -14,6 +24,24 @@ export function usePrograms(programId = null) {
   const [selectedType, setSelectedType] = useState("Всі типи");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentProgram, setCurrentProgram] = useState(null);
+
+  useEffect(() => {
+    if (programId) return;
+
+    const handleResize = () => {
+      const newLimit = getAdaptiveLimit();
+      setLimit((prevLimit) => {
+        if (prevLimit !== newLimit) {
+          setPage(1);
+          return newLimit;
+        }
+        return prevLimit;
+      });
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [programId]);
 
   useEffect(() => {
     if (programId) return;
@@ -48,7 +76,7 @@ export function usePrograms(programId = null) {
         setLoading(true);
         const data = await programApi.getPublicList({
           page,
-          limit: 6,
+          limit,
           search: debouncedSearch.trim() || undefined,
           type: selectedType !== "Всі типи" ? selectedType : undefined,
           domain: selectedDomain !== "Всі галузі" ? selectedDomain : undefined,
@@ -65,7 +93,7 @@ export function usePrograms(programId = null) {
     };
 
     fetchPrograms();
-  }, [page, debouncedSearch, selectedType, selectedDomain, programId]);
+  }, [page, limit, debouncedSearch, selectedType, selectedDomain, programId]);
 
   const programsWithUrgency = useMemo(() => {
     if (programId) return [];
@@ -109,6 +137,7 @@ export function usePrograms(programId = null) {
     page,
     totalPages,
     totalItems,
+    limit,
     setPage,
     searchTerm,
     setSearchTerm,

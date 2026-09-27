@@ -22,7 +22,6 @@ export default function PostFilters({
   ];
 
   const categoryOptions = [
-    { value: "Всі", label: "Всі категорії" },
     ...CATEGORIES.map((cat) => ({ value: cat, label: cat })),
   ];
 

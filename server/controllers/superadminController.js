@@ -4,7 +4,7 @@ const notificationService = require("../services/notificationService");
 class SuperadminController {
   async getAnalytics(req, res, next) {
     try {
-      const data = await superadminService.getFullDashboardAnalytics();
+      const data = await superadminService.getFullDashboardAnalytics(req);
       res.json(data);
     } catch (err) {
       next(err);
@@ -28,7 +28,7 @@ class SuperadminController {
 
   async getPrograms(req, res, next) {
     try {
-      const data = await superadminService.getProgramsList(req.query);
+      const data = await superadminService.getProgramsList(req.query, req);
       res.json(data);
     } catch (err) {
       next(err);

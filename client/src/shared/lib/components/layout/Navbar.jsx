@@ -51,6 +51,7 @@ export default function Navbar() {
     { label: "Архів", path: "/archive" },
     { label: "Блог", path: "/blog" },
     { label: "Про нас", path: "/about" },
+    { label: "Установи", path: "/organizations" },
     { label: "Правила", path: "/rules" },
   ];
 

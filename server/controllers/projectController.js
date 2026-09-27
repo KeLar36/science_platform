@@ -92,7 +92,7 @@ class ProjectController {
 
   async getById(req, res, next) {
     try {
-      const project = await projectService.getById(req.params.id);
+      const project = await projectService.getById(req.params.id, req.user);
       if (!project) {
         return res.status(404).json({ message: "Проєкт не знайдено" });
       }

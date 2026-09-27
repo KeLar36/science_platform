@@ -18,8 +18,10 @@ export const organizationApi = {
     return res.data;
   },
 
-  getPublicList: async () => {
-    const res = await axiosInstance.get("/organizations/public/list");
+  getPublicList: async (params = {}) => {
+    const res = await axiosInstance.get("/organizations/public/list", {
+      params,
+    });
     return res.data;
   },
 

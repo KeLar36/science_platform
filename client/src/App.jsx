@@ -23,6 +23,12 @@ const CreatePostPage = lazy(
 const OrganizationDashboardPage = lazy(
   () => import("@/features/organization/pages/OrganizationDashboard"),
 );
+const OrganizationDetailsPage = lazy(
+  () => import("@/features/organization/pages/OrganizationDetails"),
+);
+const OrganizationsPage = lazy(
+  () => import("@/features/organization/pages/OrganizationsPage"),
+);
 const HomePage = lazy(() => import("@/pages/homePage"));
 const AboutPage = lazy(() => import("@/pages/aboutPage"));
 const RulesPage = lazy(() => import("@/pages/RulesPage"));
@@ -78,6 +84,11 @@ function AppContent() {
           <Route path="/programs/:id" element={<ProgramDetailsPage />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:id" element={<PostDetail />} />
+          <Route path="/organizations" element={<OrganizationsPage />} />
+          <Route
+            path="/organizations/:id"
+            element={<OrganizationDetailsPage />}
+          />
 
           {/* ================================================================ */}
           {/* 2. ШАР АВТОРИЗАЦІЇ (Доступні лише неавторизованим)              */}
