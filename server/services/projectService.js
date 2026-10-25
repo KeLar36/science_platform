@@ -420,20 +420,25 @@ class ProjectService {
     const limitNum = Math.max(1, parseInt(limit, 10) || 8);
     const skip = (pageNum - 1) * limitNum;
 
+    // 1. Дозволені типи програм для НАУКОВОГО АРХІВУ (без "Грант" та "Курс")
     const allowedTypes = [
       "Науковий журнал",
       "Стаття",
       "Датасет",
       "Конференція",
-      "Курс",
     ];
 
+    // 2. Знаходимо ID всіх програм дозволених типів
     const validPrograms = await Program.find({
       type: { $in: allowedTypes },
     }).select("_id organizationId");
 
+    const validProgramIds = validPrograms.map((p) => p._id);
+
     const query = this.#buildFilterQuery(queryFilters);
 
+    // 3. 🎯 КЛЮЧОВИЙ ФІЛЬТР: Примусово обмежуємо проєкти ТІЛЬКИ дозволеними програмами
+    query.programId = { $in: validProgramIds };
     query.status = { $in: ["Прийнято", "approved"] };
 
     if (!currentUser) {
