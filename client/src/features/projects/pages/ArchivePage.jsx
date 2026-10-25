@@ -16,9 +16,7 @@ const ALLOWED_ARCHIVE_TYPES = [
   "Науковий журнал",
   "Стаття",
   "Конференція",
-  "Грант",
   "Датасет",
-  "Курс",
 ];
 
 export default function ArchivePage() {
@@ -30,7 +28,7 @@ export default function ArchivePage() {
     handleResetFilters,
     pagination,
     changePage,
-  } = useProjects({}, 8, true);
+  } = useProjects({}, 9, true);
 
   const [selectedProject, setSelectedProject] = useState(null);
 
@@ -63,7 +61,6 @@ export default function ArchivePage() {
 
       <main className="flex-grow pt-40 pb-24 px-3 lg:px-0 relative">
         <div className="max-w-7xl mx-auto relative z-10 flex flex-col gap-8">
-          {/* Шапка архіву */}
           <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-border-color/65 pb-8 w-full">
             <div className="space-y-3 max-w-2xl text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-xl text-[10px] font-black uppercase tracking-widest font-mono">
@@ -88,7 +85,6 @@ export default function ArchivePage() {
             </div>
           </div>
 
-          {/* Панель фільтрів */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-bg-secondary/60 p-4 rounded-2xl border border-border-color backdrop-blur-xs w-full items-center">
             <div className="md:col-span-2">
               <Input
