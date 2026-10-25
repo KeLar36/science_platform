@@ -67,7 +67,6 @@ const auditLogSchema = new mongoose.Schema(
       entityName: { type: String, default: "" },
     },
 
-    // Деталізація змін (Diff State) та додаткові метадані
     payload: {
       previousState: { type: mongoose.Schema.Types.Mixed, default: null },
       newState: { type: mongoose.Schema.Types.Mixed, default: null },
@@ -84,7 +83,6 @@ const auditLogSchema = new mongoose.Schema(
   },
 );
 
-// Індекси для супер-швидкої пагінації та фільтрації у суперадмінці
 auditLogSchema.index({ createdAt: -1 });
 auditLogSchema.index({ organizationId: 1, createdAt: -1 });
 auditLogSchema.index({ category: 1, severity: 1 });

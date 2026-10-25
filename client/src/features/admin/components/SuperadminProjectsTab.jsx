@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
 import {
   Search,
-  FileText,
-  User,
-  BookOpen,
-  UserCheck,
+  Users,
+  Ban,
   Trash2,
-  Tag,
-  Download,
-  UserPlus,
+  Mail,
+  ShieldAlert,
+  Shield,
 } from "lucide-react";
 import Card from "@/shared/ui/Card";
 import Skeleton from "@/shared/ui/Skeleton";
@@ -20,121 +18,154 @@ import Select from "@/shared/ui/Select";
 import Pagination from "@/shared/ui/Pagination";
 import { Table, TableRow, TableCell } from "@/shared/ui/Table";
 import { useAdminData } from "@/features/admin/hooks/useAdminData";
-import AssignReviewerModal from "@/features/admin/components/AssignReviewerModal";
+import ChangeRoleModal from "@/features/organization/components/ChangeRoleModal";
 
-export default function SuperadminProjectsTab() {
+export default function SuperadminUsersTab() {
   const {
-    projects = [],
+    users = [],
     loading = false,
-    projectsPagination,
-    pagination: fallbackPagination,
-    fetchProjects,
-    deleteProject,
+    usersPagination: pagination,
+    fetchUsers,
+    updateUserRole,
+    toggleBanUser,
+    deleteUser,
   } = useAdminData();
-
-  const pagination = projectsPagination ||
-    fallbackPagination || {
-      currentPage: 1,
-      totalPages: 1,
-      totalItems: 0,
-    };
 
   const [feedback, setFeedback] = useState({ type: null, message: "" });
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Всі");
-  const [reviewStatusFilter, setReviewStatusFilter] = useState("Всі");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [accountStatusFilter, setAccountStatusFilter] = useState("");
 
-  const [selectedProjectForAssign, setSelectedProjectForAssign] =
-    useState(null);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedUserForRole, setSelectedUserForRole] = useState(null);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
-    setTimeout(() => {
-      setFeedback({ type: null, message: "" });
-    }, 5000);
+    setTimeout(() => setFeedback({ type: null, message: "" }), 5000);
   };
 
+  // Debounce для текстового пошуку (350ms)
   useEffect(() => {
-    if (typeof fetchProjects === "function") {
-      fetchProjects(pagination?.currentPage || 1, {
-        search,
-        status: statusFilter,
-        reviewStatus: reviewStatusFilter,
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Запит до сервера спрацьовує тільки за наявності debouncedSearch
+  useEffect(() => {
+    if (typeof fetchUsers === "function") {
+      fetchUsers(pagination?.currentPage || 1, {
+        search: debouncedSearch.trim(),
+        role: roleFilter,
+        accountStatus: accountStatusFilter,
       });
     }
   }, [
     pagination?.currentPage,
-    search,
-    statusFilter,
-    reviewStatusFilter,
-    fetchProjects,
+    debouncedSearch,
+    roleFilter,
+    accountStatusFilter,
+    fetchUsers,
   ]);
 
-  const handleOpenAssignModal = (project) => {
-    setSelectedProjectForAssign(project);
-    setIsAssignModalOpen(true);
+  const handleOpenRoleModal = (user) => {
+    setSelectedUserForRole(user);
+    setIsRoleModalOpen(true);
   };
 
-  const handleDelete = async (projectId, projectTitle) => {
+  const handleSaveRole = async (payload) => {
+    if (!selectedUserForRole) return;
+
+    const res = await updateUserRole(selectedUserForRole._id, payload);
+
+    if (res?.success) {
+      showFeedback(
+        "success",
+        res.message ||
+          `Роль для "${selectedUserForRole.name}" успішно оновлено!`,
+      );
+      setIsRoleModalOpen(false);
+      setSelectedUserForRole(null);
+    } else {
+      throw new Error(res?.message || "Помилка оновлення ролі");
+    }
+  };
+
+  const handleToggleBan = async (user) => {
+    const actionText = user.isBanned ? "розблокувати" : "заблокувати";
+    const warnMsg =
+      !user.isBanned && user.role === "reviewer"
+        ? "\nУВАГА: Всі активні роботи цього рецензента будуть повернені в чергу!"
+        : "";
+
     if (
       !confirm(
-        `Ви дійсно бажаєте остаточно видалити наукову працю "${projectTitle}"?\nУсі версії файлів будуть видалені з хмари!`,
+        `Ви дійсно бажаєте ${actionText} користувача "${user.name}"?${warnMsg}`,
       )
-    ) {
+    )
       return;
+
+    const res = await toggleBanUser(user._id, user.isBanned);
+    if (res?.success) {
+      showFeedback("success", res.message);
+    } else {
+      showFeedback("danger", res?.message || "Помилка зміни статусу бана");
+    }
+  };
+
+  const handleDelete = async (user) => {
+    if (user.role === "superadmin") {
+      return showFeedback(
+        "danger",
+        "Неможливо видалити суперадміністратора системи!",
+      );
     }
 
-    try {
-      const res = await deleteProject(projectId);
-      if (res?.success) {
-        showFeedback("success", `Працю "${projectTitle}" успішно видалено.`);
-        fetchProjects(pagination?.currentPage || 1, {
-          search,
-          status: statusFilter,
-          reviewStatus: reviewStatusFilter,
-        });
-      } else {
-        showFeedback("danger", res?.message || "Помилка видалення праці.");
-      }
-    } catch (err) {
+    if (user.isAnonymized) {
+      return showFeedback(
+        "danger",
+        "Цей акаунт вже було анонімізовано раніше!",
+      );
+    }
+
+    if (
+      !confirm(
+        `УВАГА! Видалення користувача "${user.name}" анонімізує його дані за стандартами GDPR. Продовжити?`,
+      )
+    )
+      return;
+
+    const res = await deleteUser(user._id);
+    if (res?.success) {
+      showFeedback("success", res.message);
+      fetchUsers(1, {
+        search: debouncedSearch.trim(),
+        role: roleFilter,
+        accountStatus: accountStatusFilter,
+      });
+    } else {
       showFeedback(
         "danger",
-        err.response?.data?.message || "Сталася помилка при видаленні праці.",
+        res?.message || "Не вдалося анонімізувати користувача",
       );
     }
   };
 
-  const projectList = Array.isArray(projects) ? projects : [];
+  const userList = Array.isArray(users) ? users : [];
 
   const headers = [
-    "Назва праці / Галузь",
-    "Автор",
-    "Програма",
-    "Рецензент",
-    "Статус",
-    "Файл / Дії",
+    "Користувач",
+    "Email / Місто",
+    "Поточна роль",
+    "Статус акаунта",
+    "Дії (Superadmin)",
   ];
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "Прийнято":
-        return <Badge status="success">Прийнято</Badge>;
-      case "Відхилено":
-        return <Badge status="danger">Відхилено</Badge>;
-      case "На доопрацюванні":
-        return <Badge status="warning">Доопрацювання</Badge>;
-      default:
-        return <Badge status="default">На розгляді</Badge>;
-    }
-  };
-
-  if (loading && projectList.length === 0) {
-    return <Skeleton variant="rectangle" height="280px" />;
-  }
-
   return (
-    <div className="space-y-4 text-left font-sans">
+    <div className="space-y-4 text-left">
       {feedback.type && (
         <Alert
           variant={feedback.type}
@@ -144,163 +175,168 @@ export default function SuperadminProjectsTab() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-bg-secondary p-3 rounded-xl border border-border-color">
-        <Input
-          placeholder="Шукати за назвою чи описом..."
-          icon={Search}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <Select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          options={[
-            { label: "Усі статуси", value: "Всі" },
-            { label: "На розгляді", value: "На розгляді" },
-            { label: "Прийнято", value: "Прийнято" },
-            { label: "На доопрацюванні", value: "На доопрацюванні" },
-            { label: "Відхилено", value: "Відхилено" },
-          ]}
-        />
-        <Select
-          value={reviewStatusFilter}
-          onChange={(e) => setReviewStatusFilter(e.target.value)}
-          options={[
-            { label: "Усі рецензії", value: "Всі" },
-            { label: "Не призначено", value: "Не призначено" },
-            { label: "В процесі", value: "В процесі" },
-            { label: "Завершено", value: "Завершено" },
-            { label: "На доопрацюванні", value: "На доопрацюванні" },
-          ]}
-        />
+      {/* ФІЛЬТРИ ТА ПОШУК (Стабільний елемент у DOM) */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-bg-secondary p-3 rounded-xl border border-border-color">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full flex-1">
+          <Input
+            placeholder="Шукати за ім'ям або email..."
+            icon={Search}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            options={[
+              { label: "Всі ролі", value: "" },
+              { label: "Користувач (user)", value: "user" },
+              { label: "Рецензент (reviewer)", value: "reviewer" },
+              {
+                label: "Контент-менеджер (content-manager)",
+                value: "content-manager",
+              },
+              { label: "Адмін (admin)", value: "admin" },
+              { label: "Суперадмін (superadmin)", value: "superadmin" },
+            ]}
+          />
+          <Select
+            value={accountStatusFilter}
+            onChange={(e) => setAccountStatusFilter(e.target.value)}
+            options={[
+              { label: "Всі типи акаунтів", value: "" },
+              { label: "Активні", value: "active" },
+              { label: "Заблоковані", value: "banned" },
+              { label: "Анонімізовані (GDPR)", value: "anonymized" },
+            ]}
+          />
+        </div>
       </div>
 
-      {projectList.length === 0 ? (
+      {/* ТАБЛИЦЯ / СКЕЛЕТОН / ПОРОЖНІЙ СТАН */}
+      {loading && userList.length === 0 ? (
+        <Skeleton variant="rectangle" height="280px" />
+      ) : userList.length === 0 ? (
         <Card className="p-8 text-center space-y-2 bg-bg-secondary/40 border-dashed">
-          <FileText className="mx-auto text-text-muted" size={36} />
+          <Users className="mx-auto text-text-muted" size={36} />
           <p className="text-xs font-mono text-text-muted">
-            Ніяких наукових праць не знайдено за вказаними фільтрами.
+            Користувачів за вказаними фільтрами не знайдено.
           </p>
         </Card>
       ) : (
         <>
-          <Table headers={headers} className="[&_table]:min-w-[1000px]">
-            {projectList.map((proj) => {
-              const latestVersion =
-                proj.versions && proj.versions.length > 0
-                  ? proj.versions[proj.versions.length - 1]
-                  : null;
-              const fileUrl = proj.fileUrl || latestVersion?.fileUrl;
+          <Table headers={headers} className="[&_table]:min-w-[900px]">
+            {userList.map((u) => {
+              const isDisabled = u.role === "superadmin" || u.isAnonymized;
 
               return (
-                <TableRow key={proj._id}>
-                  <TableCell className="px-8 py-5 min-w-[280px]">
-                    <div className="space-y-1">
-                      <span className="font-bold text-sm text-text-primary block line-clamp-2">
-                        {proj.title}
-                      </span>
-                      <div className="flex items-center gap-1.5 text-[11px] font-mono text-text-muted">
-                        <Tag size={12} className="text-purple-600" />
-                        <span>{proj.domain || "Загальна"}</span>
+                <TableRow key={u._id}>
+                  {/* Користувач */}
+                  <TableCell className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center font-bold text-purple-600 text-xs shrink-0 overflow-hidden">
+                        {u.image ? (
+                          <img
+                            src={u.image}
+                            alt={u.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          u.name?.charAt(0)?.toUpperCase() || "U"
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-bold text-sm text-text-primary block leading-tight">
+                          {u.name}
+                        </span>
+                        {u.role === "superadmin" && (
+                          <span className="text-[10px] font-mono text-purple-600 font-bold flex items-center gap-1">
+                            <ShieldAlert size={10} /> System Owner
+                          </span>
+                        )}
                       </div>
                     </div>
                   </TableCell>
 
-                  <TableCell className="px-8 py-5 whitespace-nowrap">
+                  <TableCell className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col text-xs font-mono">
-                      <span className="font-bold text-text-primary flex items-center gap-1">
-                        <User size={13} className="text-purple-600" />
-                        {proj.authorId?.name || "—"}
+                      <span className="text-text-primary flex items-center gap-1">
+                        <Mail size={12} className="text-text-muted" />
+                        {u.email}
                       </span>
                       <span className="text-text-muted text-[11px]">
-                        {proj.authorId?.email || "—"}
+                        {u.city || "Місто не вказано"}
                       </span>
                     </div>
                   </TableCell>
 
-                  <TableCell className="px-8 py-5 min-w-[200px]">
-                    <div className="flex flex-col text-xs">
-                      <span className="font-semibold text-text-primary flex items-center gap-1 line-clamp-1">
-                        <BookOpen size={13} className="text-text-muted" />
-                        {proj.programId?.title || proj.programTitle || "—"}
-                      </span>
-                      {proj.programId?.type && (
-                        <span className="text-[10px] font-mono text-purple-600 bg-purple-500/10 px-1.5 py-0.5 rounded w-fit mt-0.5">
-                          {proj.programId.type}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="px-8 py-5 whitespace-nowrap">
-                    <div className="flex items-center gap-2 font-mono">
-                      {proj.reviewerId ? (
-                        <div className="flex flex-col text-xs">
-                          <span className="font-semibold text-text-primary flex items-center gap-1">
-                            <UserCheck size={13} className="text-green-500" />
-                            {proj.reviewerId.name}
-                          </span>
-                          <span className="text-text-muted text-[11px]">
-                            {proj.reviewerId.email}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded text-[11px] font-mono">
-                            Не призначено
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            icon={UserPlus}
-                            onClick={() => handleOpenAssignModal(proj)}
-                            className="text-xs text-purple-600 border-purple-500/30 hover:bg-purple-500/10"
-                            title="Призначити рецензента"
-                          >
-                            Призначити
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="px-8 py-5 whitespace-nowrap">
-                    <div className="space-y-1">
-                      {getStatusBadge(proj.status)}
-                      <div className="text-[10px] font-mono text-text-muted">
-                        Рецензія: {proj.reviewStatus || "—"}
-                      </div>
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="px-8 py-5 whitespace-nowrap">
+                  <TableCell className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      {fileUrl ? (
-                        <a
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 rounded-lg border border-border-color bg-bg-tertiary text-purple-600 hover:border-purple-600 hover:bg-purple-500/10 transition-colors"
-                          title="Переглянути файл"
-                        >
-                          <Download size={14} />
-                        </a>
-                      ) : (
-                        <span
-                          className="text-text-muted text-xs font-mono"
-                          title="Файл відсутній"
-                        >
-                          —
-                        </span>
-                      )}
+                      <Badge
+                        status="default"
+                        className="uppercase font-mono text-[10px]"
+                      >
+                        {u.role}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={Shield}
+                        disabled={isDisabled}
+                        onClick={() => handleOpenRoleModal(u)}
+                        className="text-xs font-mono"
+                        title="Змінити роль та дозволи"
+                      >
+                        Змінити
+                      </Button>
+                    </div>
+                  </TableCell>
+
+                  <TableCell className="px-6 py-4 whitespace-nowrap">
+                    {u.isAnonymized ? (
+                      <Badge status="default">Анонімізовано</Badge>
+                    ) : u.isBanned ? (
+                      <Badge status="danger">Заблоковано</Badge>
+                    ) : (
+                      <Badge status="success">Активний</Badge>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={Ban}
+                        disabled={isDisabled}
+                        onClick={() => handleToggleBan(u)}
+                        className={`text-xs ${
+                          u.isBanned
+                            ? "text-green-500 border-green-500/30 hover:bg-green-500/10"
+                            : "text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                        }`}
+                        title={
+                          u.isAnonymized
+                            ? "Анонімізований акаунт"
+                            : u.isBanned
+                              ? "Розблокувати"
+                              : "Заблокувати"
+                        }
+                      >
+                        {u.isBanned ? "Unban" : "Ban"}
+                      </Button>
 
                       <Button
                         variant="outline"
                         size="sm"
                         icon={Trash2}
-                        onClick={() => handleDelete(proj._id, proj.title)}
-                        className="text-xs text-red-500 border-red-500/30 hover:bg-red-500/10"
-                        title="Видалити назавжди"
+                        disabled={isDisabled}
+                        onClick={() => handleDelete(u)}
+                        className="text-xs text-red-500 border-red-500/30 hover:bg-red-500/10 disabled:opacity-30"
+                        title={
+                          u.isAnonymized
+                            ? "Вже анонімізовано"
+                            : "Видалити (GDPR)"
+                        }
                       />
                     </div>
                   </TableCell>
@@ -314,10 +350,10 @@ export default function SuperadminProjectsTab() {
               currentPage={pagination.currentPage || 1}
               totalPages={pagination.totalPages || 1}
               onPageChange={(page) =>
-                fetchProjects(page, {
-                  search,
-                  status: statusFilter,
-                  reviewStatus: reviewStatusFilter,
+                fetchUsers(page, {
+                  search: debouncedSearch.trim(),
+                  role: roleFilter,
+                  accountStatus: accountStatusFilter,
                 })
               }
             />
@@ -325,25 +361,16 @@ export default function SuperadminProjectsTab() {
         </>
       )}
 
-      {selectedProjectForAssign && (
-        <AssignReviewerModal
-          isOpen={isAssignModalOpen}
+      {selectedUserForRole && (
+        <ChangeRoleModal
+          isOpen={isRoleModalOpen}
           onClose={() => {
-            setIsAssignModalOpen(false);
-            setSelectedProjectForAssign(null);
+            setIsRoleModalOpen(false);
+            setSelectedUserForRole(null);
           }}
-          project={selectedProjectForAssign}
-          onSuccess={() => {
-            showFeedback(
-              "success",
-              `Рецензента успішно призначено для праці "${selectedProjectForAssign.title}"!`,
-            );
-            fetchProjects(pagination?.currentPage || 1, {
-              search,
-              status: statusFilter,
-              reviewStatus: reviewStatusFilter,
-            });
-          }}
+          member={selectedUserForRole}
+          orgId={selectedUserForRole.organizationId}
+          onSave={handleSaveRole}
         />
       )}
     </div>

@@ -86,7 +86,7 @@ export default function SuperadminOverviewTab({
                 onClick={() => onTabChange?.("projects")}
                 className="shrink-0 font-mono text-[11px] uppercase tracking-wider"
               >
-                Призначити ручно
+                Призначити вручну
               </Button>
             </div>
           </Alert>

@@ -5,8 +5,8 @@ import Skeleton from "@/shared/ui/Skeleton";
 export default function ProfileStats({ stats, loading }) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} variant="rectangle" height="100px" />
         ))}
       </div>
@@ -17,7 +17,7 @@ export default function ProfileStats({ stats, loading }) {
     stats?.total > 0 ? Math.round((stats.accepted / stats.total) * 100) : 0;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <AnalyticsCard
         title="Всього праць"
         value={stats?.total || 0}
@@ -44,6 +44,14 @@ export default function ProfileStats({ stats, loading }) {
         trend={stats?.needsRevision > 0 ? "Увага" : undefined}
         trendType="down"
         description="Відправлено на доопрацювання"
+      />
+
+      <AnalyticsCard
+        title="Відхилено"
+        value={stats?.rejected || 0}
+        trend={stats?.rejected > 0 ? "Архів" : undefined}
+        trendType="down"
+        description="Не відповідають вимогам"
       />
     </div>
   );

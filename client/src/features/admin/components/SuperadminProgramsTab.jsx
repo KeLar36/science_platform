@@ -26,6 +26,7 @@ export default function SuperadminProgramsTab() {
 
   const [feedback, setFeedback] = useState({ type: null, message: "" });
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -36,15 +37,25 @@ export default function SuperadminProgramsTab() {
     }, 5000);
   };
 
+  // Debounce для пошукового інпута (350ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Запит на сервер надсилається тільки після затримки debouncedSearch
   useEffect(() => {
     if (typeof fetchPrograms === "function") {
       fetchPrograms({
         page: currentPage,
-        search: search.trim(),
+        search: debouncedSearch.trim(),
         active: statusFilter === "all" ? undefined : statusFilter === "active",
       });
     }
-  }, [currentPage, search, statusFilter, fetchPrograms]);
+  }, [currentPage, debouncedSearch, statusFilter, fetchPrograms]);
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -62,11 +73,11 @@ export default function SuperadminProgramsTab() {
       if (result?.success) {
         showFeedback(
           "success",
-          result.message || `Статус программы "${prog.title}" успішно змінено.`,
+          result.message || `Статус програми "${prog.title}" успішно змінено.`,
         );
         fetchPrograms({
           page: currentPage,
-          search,
+          search: debouncedSearch.trim(),
           active:
             statusFilter === "all" ? undefined : statusFilter === "active",
         });
@@ -77,10 +88,6 @@ export default function SuperadminProgramsTab() {
       showFeedback("danger", "Не вдалося змінити статус програми.");
     }
   };
-
-  if (loading && (!programs || programs.length === 0)) {
-    return <Skeleton variant="rectangle" height="250px" />;
-  }
 
   const headers = [
     "Назва програми",
@@ -102,6 +109,7 @@ export default function SuperadminProgramsTab() {
         </Alert>
       )}
 
+      {/* ФІЛЬТРИ ТА ПОШУК (Завжди присутні в DOM) */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-bg-secondary p-3 rounded-xl border border-border-color">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
           <Input
@@ -122,7 +130,10 @@ export default function SuperadminProgramsTab() {
         </div>
       </div>
 
-      {programs.length === 0 ? (
+      {/* ТАБЛИЦЯ / СКЕЛЕТОН / ПОРОЖНІЙ СТАН */}
+      {loading && (!programs || programs.length === 0) ? (
+        <Skeleton variant="rectangle" height="250px" />
+      ) : programs.length === 0 ? (
         <Card className="p-8 text-center space-y-2 bg-bg-secondary/40 border-dashed">
           <BookOpen className="mx-auto text-text-muted" size={32} />
           <p className="text-xs font-mono text-text-muted">

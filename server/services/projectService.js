@@ -71,15 +71,39 @@ class ProjectService {
     const limitNum = Math.max(1, parseInt(limit, 10) || 8);
     const skip = (pageNum - 1) * limitNum;
 
-    const projects = await Project.find(query)
-      .populate("programId", "title type organizationId")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const [
+      projects,
+      total,
+      acceptedCount,
+      pendingCount,
+      revisionCount,
+      rejectedCount,
+    ] = await Promise.all([
+      Project.find(query)
+        .populate("programId", "title type organizationId")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Project.countDocuments(query),
+      Project.countDocuments({ authorId, status: "Прийнято" }),
+      Project.countDocuments({
+        authorId,
+        $or: [{ status: "На розгляді" }, { status: { $exists: false } }],
+      }),
+      Project.countDocuments({ authorId, status: "На доопрацюванні" }),
+      Project.countDocuments({ authorId, status: "Відхилено" }),
+    ]);
 
-    const total = await Project.countDocuments(query);
     const totalPages = Math.ceil(total / limitNum) || 1;
+
+    const stats = {
+      total,
+      accepted: acceptedCount,
+      pending: pendingCount,
+      needsRevision: revisionCount,
+      rejected: rejectedCount,
+    };
 
     if (projects.length === 0) {
       return {
@@ -87,6 +111,7 @@ class ProjectService {
         totalPages: 1,
         currentPage: pageNum,
         totalItems: 0,
+        stats,
       };
     }
 
@@ -119,6 +144,7 @@ class ProjectService {
       totalPages,
       currentPage: pageNum,
       totalItems: total,
+      stats,
     };
   }
 
@@ -217,6 +243,10 @@ class ProjectService {
       project.reviewStatus = "На доопрацюванні";
     } else {
       project.reviewStatus = "Завершено";
+      // 👈 Зменшуємо лічильник активних робіт рецензента при завершенні
+      await User.findByIdAndUpdate(reviewerId, {
+        $inc: { assignedProjectsCount: -1 },
+      });
     }
 
     project.reviewerComments =
@@ -452,9 +482,6 @@ class ProjectService {
     };
   }
 
-  /**
-   * Створення нового проекту з авто-розподілом $k_r$
-   */
   async create(projectData, req = null) {
     const program = await Program.findById(projectData.programId);
     if (!program) {
@@ -494,7 +521,7 @@ class ProjectService {
     });
 
     try {
-      const validReviewers = await User.find({
+      const selectedReviewer = await User.findOne({
         role: "reviewer",
         organizationId: program.organizationId,
         isBanned: false,
@@ -505,60 +532,16 @@ class ProjectService {
             : [projectData.domain],
         },
         allowedTypes: program.type,
-      }).select("_id name lastAssignedAt updatedAt");
+      })
+        .sort({ assignedProjectsCount: 1, lastAssignedAt: 1, updatedAt: 1 })
+        .select("_id name");
 
-      if (validReviewers && validReviewers.length > 0) {
-        const reviewerIds = validReviewers.map((r) => r._id);
-
-        const activeCounts = await Project.aggregate([
-          {
-            $match: {
-              reviewerId: { $in: reviewerIds },
-              status: { $in: ["На розгляді", "На доопрацюванні"] },
-            },
-          },
-          {
-            $group: {
-              _id: "$reviewerId",
-              count: { $sum: 1 },
-            },
-          },
-        ]);
-
-        const loadMap = new Map();
-        activeCounts.forEach((item) => {
-          loadMap.set(item._id.toString(), item.count);
-        });
-
-        let selectedReviewer = validReviewers[0];
-        let minKr = loadMap.get(selectedReviewer._id.toString()) || 0;
-
-        for (const reviewer of validReviewers) {
-          const currentKr = loadMap.get(reviewer._id.toString()) || 0;
-
-          if (currentKr < minKr) {
-            minKr = currentKr;
-            selectedReviewer = reviewer;
-          } else if (currentKr === minKr) {
-            const timeA = new Date(
-              selectedReviewer.lastAssignedAt ||
-                selectedReviewer.updatedAt ||
-                0,
-            ).getTime();
-            const timeB = new Date(
-              reviewer.lastAssignedAt || reviewer.updatedAt || 0,
-            ).getTime();
-
-            if (timeB < timeA) {
-              selectedReviewer = reviewer;
-            }
-          }
-        }
-
+      if (selectedReviewer) {
         newProject.reviewerId = selectedReviewer._id;
         newProject.reviewStatus = "В процесі";
 
         await User.findByIdAndUpdate(selectedReviewer._id, {
+          $inc: { assignedProjectsCount: 1 },
           $set: { lastAssignedAt: new Date() },
         });
       } else {
@@ -651,54 +634,18 @@ class ProjectService {
       );
       if (!program) continue;
 
-      const validReviewers = await User.find({
+      const selectedReviewer = await User.findOne({
         role: "reviewer",
         organizationId: organizationId,
         isBanned: false,
         isReviewerActive: true,
         allowedDomains: proj.domain,
         allowedTypes: program.type,
-      }).select("_id name lastAssignedAt updatedAt");
+      })
+        .sort({ assignedProjectsCount: 1, lastAssignedAt: 1, updatedAt: 1 })
+        .select("_id name");
 
-      if (validReviewers && validReviewers.length > 0) {
-        const reviewerIds = validReviewers.map((r) => r._id);
-
-        const activeCounts = await Project.aggregate([
-          {
-            $match: {
-              reviewerId: { $in: reviewerIds },
-              status: { $in: ["На розгляді", "На доопрацюванні"] },
-            },
-          },
-          { $group: { _id: "$reviewerId", count: { $sum: 1 } } },
-        ]);
-
-        const loadMap = new Map();
-        activeCounts.forEach((item) =>
-          loadMap.set(item._id.toString(), item.count),
-        );
-
-        let selectedReviewer = validReviewers[0];
-        let minKr = loadMap.get(selectedReviewer._id.toString()) || 0;
-
-        for (const reviewer of validReviewers) {
-          const currentKr = loadMap.get(reviewer._id.toString()) || 0;
-          if (currentKr < minKr) {
-            minKr = currentKr;
-            selectedReviewer = reviewer;
-          } else if (currentKr === minKr) {
-            const timeA = new Date(
-              selectedReviewer.lastAssignedAt ||
-                selectedReviewer.updatedAt ||
-                0,
-            ).getTime();
-            const timeB = new Date(
-              reviewer.lastAssignedAt || reviewer.updatedAt || 0,
-            ).getTime();
-            if (timeB < timeA) selectedReviewer = reviewer;
-          }
-        }
-
+      if (selectedReviewer) {
         proj.reviewerId = selectedReviewer._id;
         proj.reviewStatus = "В процесі";
         await proj.save();
@@ -706,6 +653,7 @@ class ProjectService {
         reassignedCount++;
 
         await User.findByIdAndUpdate(selectedReviewer._id, {
+          $inc: { assignedProjectsCount: 1 },
           $set: { lastAssignedAt: new Date() },
         });
 
@@ -721,7 +669,6 @@ class ProjectService {
     }
 
     if (reassignedCount > 0) {
-      // 👈 АУДИТ ЗАПИС: Масове авто-перепризначення
       await auditService.log({
         req,
         action: "PROJECTS_AUTO_REASSIGNED",
@@ -761,6 +708,17 @@ class ProjectService {
 
     if (isReassigned) {
       updateData.reviewStatus = "В процесі";
+
+      // 👈 Зменшуємо лічильник для старого та збільшуємо для нового
+      if (oldProject.reviewerId) {
+        await User.findByIdAndUpdate(oldProject.reviewerId, {
+          $inc: { assignedProjectsCount: -1 },
+        });
+      }
+      await User.findByIdAndUpdate(updateData.reviewerId, {
+        $inc: { assignedProjectsCount: 1 },
+        $set: { lastAssignedAt: new Date() },
+      });
     }
 
     const updatedProject = await Project.findByIdAndUpdate(
@@ -882,6 +840,12 @@ class ProjectService {
       const error = new Error("Проєкт не знайдено");
       error.statusCode = 404;
       throw error;
+    }
+
+    if (project.reviewerId && project.reviewStatus === "В процесі") {
+      await User.findByIdAndUpdate(project.reviewerId, {
+        $inc: { assignedProjectsCount: -1 },
+      });
     }
 
     if (project.versions && project.versions.length > 0) {

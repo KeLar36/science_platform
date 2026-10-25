@@ -38,6 +38,7 @@ export default function SuperadminOrganizationsTab() {
 
   const [feedback, setFeedback] = useState({ type: null, message: "" });
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
   const orgList = organizations || [];
@@ -48,10 +49,27 @@ export default function SuperadminOrganizationsTab() {
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
     if (typeof fetchOrganizations === "function") {
-      fetchOrganizations(pagination?.currentPage || 1, search, statusFilter);
+      fetchOrganizations(
+        pagination?.currentPage || 1,
+        debouncedSearch.trim(),
+        statusFilter,
+      );
     }
-  }, [pagination?.currentPage, search, statusFilter, fetchOrganizations]);
+  }, [
+    pagination?.currentPage,
+    debouncedSearch,
+    statusFilter,
+    fetchOrganizations,
+  ]);
 
   const handleStatusUpdate = async (org, newStatus) => {
     const actionText = newStatus === "approved" ? "схвалити" : "відхилити";
@@ -64,7 +82,11 @@ export default function SuperadminOrganizationsTab() {
         "success",
         `Установу успішно ${newStatus === "approved" ? "схвалено" : "відхилено"}.`,
       );
-      fetchOrganizations(pagination?.currentPage || 1, search, statusFilter);
+      fetchOrganizations(
+        pagination?.currentPage || 1,
+        debouncedSearch.trim(),
+        statusFilter,
+      );
     } catch (err) {
       showFeedback("danger", "Помилка оновлення статусу.");
     }
@@ -74,21 +96,15 @@ export default function SuperadminOrganizationsTab() {
     try {
       await actionFn(orgId);
       showFeedback("success", successMsg);
-      fetchOrganizations(pagination?.currentPage || 1, search, statusFilter);
+      fetchOrganizations(
+        pagination?.currentPage || 1,
+        debouncedSearch.trim(),
+        statusFilter,
+      );
     } catch (err) {
       showFeedback("danger", "Помилка оновлення статусу.");
     }
   };
-
-  if (loading && orgList.length === 0) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3].map((n) => (
-          <Skeleton key={n} variant="rectangle" height="340px" />
-        ))}
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 text-left">
@@ -122,7 +138,13 @@ export default function SuperadminOrganizationsTab() {
         />
       </div>
 
-      {orgList.length === 0 ? (
+      {loading && orgList.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((n) => (
+            <Skeleton key={n} variant="rectangle" height="340px" />
+          ))}
+        </div>
+      ) : orgList.length === 0 ? (
         <Card className="p-12 text-center space-y-3 bg-bg-secondary/40 border-dashed">
           <Building className="mx-auto text-text-muted opacity-50" size={48} />
           <p className="text-sm font-mono text-text-muted">
@@ -141,7 +163,6 @@ export default function SuperadminOrganizationsTab() {
                 key={org._id}
                 className="flex flex-col p-5 border-border-color hover:border-purple-600/40 transition-all bg-bg-secondary/50 group"
               >
-                {/* Шапка */}
                 <div className="flex justify-between items-start mb-3 gap-2">
                   <div className="w-12 h-12 rounded-xl bg-bg-tertiary border border-border-color flex items-center justify-center overflow-hidden shrink-0">
                     {org.logo ? (
@@ -363,7 +384,7 @@ export default function SuperadminOrganizationsTab() {
           currentPage={pagination.currentPage || 1}
           totalPages={pagination.totalPages || 1}
           onPageChange={(page) =>
-            fetchOrganizations(page, search, statusFilter)
+            fetchOrganizations(page, debouncedSearch.trim(), statusFilter)
           }
         />
       )}

@@ -1,6 +1,8 @@
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
+const path = require("path");
+const crypto = require("crypto");
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -27,11 +29,12 @@ const storage = new CloudinaryStorage({
   params: async (req, file) => {
     const isImage = file.mimetype.startsWith("image/");
 
-    const cleanFileName = file.originalname
-      .split(".")[0]
+    const fileExt = path.extname(file.originalname);
+    const baseName = path
+      .basename(file.originalname, fileExt)
       .replace(/[^a-zA-Z0-9_-]/g, "_");
 
-    const fileExt = file.originalname.split(".").pop().toLowerCase();
+    const uniqueHash = crypto.randomBytes(4).toString("hex");
 
     let targetFolder = "science_hub/general";
     const currentRoute = req.baseUrl + req.path;
@@ -58,7 +61,7 @@ const storage = new CloudinaryStorage({
     return {
       folder: targetFolder,
       resource_type: isImage ? "image" : "raw",
-      public_id: `${Date.now()}-${cleanFileName}.${fileExt}`,
+      public_id: `${Date.now()}_${uniqueHash}_${baseName}`,
     };
   },
 });

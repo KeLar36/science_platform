@@ -14,7 +14,15 @@ import {
 } from "recharts";
 import { BarChart3, PieChart as PieIcon, Award } from "lucide-react";
 
-const PIE_COLORS = ["#8b5cf6", "#6366f1", "#3b82f6", "#10b981", "#f59e0b"];
+// Чіткі, виразні та контрастні кольори
+const PIE_COLORS = [
+  "#8b5cf6", // Violet (Brand)
+  "#ec4899", // Pink
+  "#3b82f6", // Blue
+  "#10b981", // Emerald
+  "#f59e0b", // Amber
+  "#06b6d4", // Cyan
+];
 
 const formatDomainLabel = (label) => {
   if (!label) return "";
@@ -24,13 +32,16 @@ const formatDomainLabel = (label) => {
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
+    const data = payload[0];
+    const color = data.payload?.fill || data.color || "#8b5cf6";
+
     return (
       <div className="bg-bg-secondary border border-border-color p-2.5 rounded-md shadow-2xl font-mono text-xs space-y-1 backdrop-blur-md z-50">
         <p className="text-text-muted text-[10px] uppercase tracking-wider font-bold">
-          {label || payload[0].name}
+          {label || data.name}
         </p>
-        <p className="text-brand font-bold">
-          {payload[0].value}{" "}
+        <p className="font-bold flex items-center gap-1.5" style={{ color }}>
+          {data.value}{" "}
           <span className="text-text-secondary font-normal">од.</span>
         </p>
       </div>
@@ -189,7 +200,7 @@ export default function OverviewCharts({
               >
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-2 h-2 rounded-sm"
+                    className="w-2.5 h-2.5 rounded-sm shrink-0"
                     style={{
                       backgroundColor: PIE_COLORS[idx % PIE_COLORS.length],
                     }}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles,
   ArrowRight,
@@ -15,6 +15,10 @@ import {
   Globe2,
   Cpu,
   ChevronRight,
+  GraduationCap,
+  BookOpen,
+  Send,
+  Zap,
 } from "lucide-react";
 import axiosInstance from "@/shared/api/axios";
 import { useAuth } from "@/shared/lib/hooks/useAuth";
@@ -45,28 +49,73 @@ const POPULAR_DOMAINS = [
   "Екологія та довкілля",
 ];
 
+const ROLE_TAB_DATA = {
+  researcher: {
+    title: "Для науковців та аспірантів",
+    desc: "Подавайте проєкти на відкриті грантові конкурси, публікуйте дослідження у фахових журналах та отримуйте незалежну експертизу.",
+    features: [
+      "Єдиний кабінет подання заявок",
+      "Анонімне рецензування (Double-Blind)",
+      "Відстеження статусу в реальному часі",
+    ],
+    cta: "Створити профіль дослідника",
+    action: "/register",
+  },
+  institution: {
+    title: "Для ЗВО та наукових установ",
+    desc: "Організовуйте конкурсні програми, приймайте наукові праці та адмініструйте власний пул рецензентів.",
+    features: [
+      "Офіційна верифікація за ЄДРПОУ",
+      "Управління журналами та грантами",
+      "Аналітичні дашборди установи",
+    ],
+    cta: "Зареєструвати установу",
+    action: "/register",
+  },
+  reviewer: {
+    title: "Для експертів та рецензентів",
+    desc: "Отримуйте запрошення на рецензування праць за вашою спеціалізацією та формуйте прозорий науковий рейтинг.",
+    features: [
+      "Автоматичний баланс $k_r$",
+      "Зручний редактор оцінювання",
+      "Захист персональних даних",
+    ],
+    cta: "Приєднатися як експерт",
+    action: "/register",
+  },
+};
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+
   const [totalPrograms, setTotalPrograms] = useState(0);
   const [totalOrgs, setTotalOrgs] = useState(0);
+  const [latestPrograms, setLatestPrograms] = useState([]);
+  const [latestPosts, setLatestPosts] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeRoleTab, setActiveRoleTab] = useState("researcher");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [programsRes, orgsRes] = await Promise.all([
-          axiosInstance.get("/programs?page=1&limit=1"),
+        const [programsRes, orgsRes, postsRes] = await Promise.all([
+          axiosInstance.get("/programs?page=1&limit=4"),
           axiosInstance.get("/organizations/public/list"),
+          axiosInstance.get("/posts?page=1&limit=3"),
         ]);
 
         setTotalPrograms(programsRes.data?.totalItems || 12);
+        setLatestPrograms(programsRes.data?.programs || []);
+
         const orgs = orgsRes.data || [];
         setTotalOrgs(orgs.length || 8);
         setOrganizations(orgs);
+
+        setLatestPosts(postsRes.data?.posts || []);
       } catch (err) {
         console.error("Помилка завантаження даних головної сторінки:", err);
       } finally {
@@ -150,9 +199,9 @@ export default function HomePage() {
               variants={fadeInLeft}
               className="lg:col-span-7 space-y-6 text-left"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 border border-brand/20 rounded-full text-brand text-xs font-mono font-bold uppercase tracking-wider">
-                <Sparkles size={13} className="animate-pulse" />
-                <span>Open Science Platform Ukraine</span>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-brand/10 border border-brand/20 rounded-full text-brand text-xs font-mono font-bold uppercase tracking-wider">
+                <Sparkles size={14} className="animate-pulse" />
+                <span>Офіційний портал відкритої науки України 2026</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-text-primary leading-[1.05]">
@@ -185,6 +234,7 @@ export default function HomePage() {
                 <Button
                   variant="outline"
                   size="lg"
+                  icon={BookOpen}
                   onClick={() => navigate("/archive")}
                   className="font-mono text-xs uppercase tracking-wider px-6 py-3.5"
                 >
@@ -229,6 +279,9 @@ export default function HomePage() {
                         <h4 className="font-bold text-sm text-text-primary font-mono uppercase tracking-wide">
                           Smart Review Workflow
                         </h4>
+                        <span className="text-[10px] text-text-muted font-mono">
+                          Алгоритм авто-розподілу $k_r$
+                        </span>
                       </div>
                     </div>
                     <Badge status="success">Active Core</Badge>
@@ -295,6 +348,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* ШВИДКИЙ ПОШУК ТА ФІЛЬТРИ */}
         <section className="max-w-7xl mx-auto w-full px-4 lg:px-0">
           <Card className="p-6 sm:p-8 bg-bg-secondary/80 border-border-color shadow-xl space-y-6 backdrop-blur-md">
             <form
@@ -347,6 +401,7 @@ export default function HomePage() {
           </Card>
         </section>
 
+        {/* АНАЛІТИЧНІ МЕТРИКИ ПЛАТФОРМИ */}
         <section className="max-w-7xl mx-auto w-full px-4 lg:px-0">
           <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
@@ -397,10 +452,190 @@ export default function HomePage() {
           </motion.div>
         </section>
 
+        {/* СЦЕНАРІЇ ДЛЯ КОРИСТУВАЧІВ (ROLE TABS) */}
+        <section className="max-w-7xl mx-auto w-full px-4 lg:px-0 text-left space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest block">
+                // Функціональні можливості
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black font-sans uppercase tracking-tight text-text-primary">
+                Екосистема для кожного учасника
+              </h2>
+            </div>
+
+            <div className="flex p-1 bg-bg-secondary border border-border-color rounded-xl font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setActiveRoleTab("researcher")}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  activeRoleTab === "researcher"
+                    ? "bg-brand text-white font-bold"
+                    : "text-text-muted hover:text-text-primary"
+                }`}
+              >
+                Дослідникам
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveRoleTab("institution")}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  activeRoleTab === "institution"
+                    ? "bg-brand text-white font-bold"
+                    : "text-text-muted hover:text-text-primary"
+                }`}
+              >
+                Установам
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveRoleTab("reviewer")}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  activeRoleTab === "reviewer"
+                    ? "bg-brand text-white font-bold"
+                    : "text-text-muted hover:text-text-primary"
+                }`}
+              >
+                Рецензентам
+              </button>
+            </div>
+          </div>
+
+          <Card className="p-8 bg-bg-secondary/90 border-border-color relative overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeRoleTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center"
+              >
+                <div className="lg:col-span-8 space-y-5">
+                  <h3 className="text-xl sm:text-2xl font-bold font-sans text-text-primary">
+                    {ROLE_TAB_DATA[activeRoleTab].title}
+                  </h3>
+                  <p className="text-sm text-text-secondary leading-relaxed max-w-2xl">
+                    {ROLE_TAB_DATA[activeRoleTab].desc}
+                  </p>
+
+                  <div className="space-y-2.5 pt-2">
+                    {ROLE_TAB_DATA[activeRoleTab].features.map((feat, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-3 text-xs font-mono text-text-primary"
+                      >
+                        <CheckCircle2
+                          size={16}
+                          className="text-brand shrink-0"
+                        />
+                        <span>{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-4">
+                    <Button
+                      variant="primary"
+                      size="md"
+                      icon={ArrowRight}
+                      onClick={() =>
+                        navigate(ROLE_TAB_DATA[activeRoleTab].action)
+                      }
+                      className="font-mono text-xs uppercase tracking-wider px-6 py-3"
+                    >
+                      {ROLE_TAB_DATA[activeRoleTab].cta}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-4 p-6 bg-bg-tertiary/80 border border-border-color rounded-2xl space-y-4 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand mx-auto">
+                    {activeRoleTab === "researcher" && (
+                      <GraduationCap size={24} />
+                    )}
+                    {activeRoleTab === "institution" && <Building2 size={24} />}
+                    {activeRoleTab === "reviewer" && <ShieldCheck size={24} />}
+                  </div>
+                  <h4 className="font-bold text-sm text-text-primary font-mono uppercase">
+                    100% Верифікований процес
+                  </h4>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    Усі дії в системі фіксуються в журналі аудиту (Audit Log)
+                    для забезпечення абсолютної прозорості.
+                  </p>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </Card>
+        </section>
+
+        {/* АКТУАЛЬНІ НАУКОВІ ПРОГРАМИ (СВІЖІ КАРТКИ) */}
+        {latestPrograms.length > 0 && (
+          <section className="max-w-7xl mx-auto w-full px-4 lg:px-0 text-left space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest block">
+                  // Конкурсні можливості
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black font-sans uppercase tracking-tight text-text-primary">
+                  Актуальні програми
+                </h2>
+              </div>
+              <Link
+                to="/programs"
+                className="text-xs font-mono text-brand hover:underline flex items-center gap-1 font-bold uppercase tracking-wider"
+              >
+                Всі програми ({totalPrograms}) <ChevronRight size={14} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {latestPrograms.map((prog) => (
+                <Card
+                  key={prog._id}
+                  hoverable
+                  onClick={() => navigate(`/programs/${prog._id}`)}
+                  className="p-5 bg-bg-secondary/90 border-border-color flex flex-col justify-between space-y-4 cursor-pointer hover:border-brand/50 transition-all"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge status="info" className="font-mono text-[10px]">
+                        {prog.type || "Програма"}
+                      </Badge>
+                      <span className="text-[10px] font-mono text-text-muted">
+                        До {new Date(prog.deadline).toLocaleDateString("uk-UA")}
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-sm text-text-primary line-clamp-2 font-sans">
+                      {prog.title}
+                    </h3>
+
+                    <p className="text-xs text-text-secondary line-clamp-2">
+                      {prog.shortDescription || prog.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-border-color/60 flex items-center justify-between text-xs font-mono">
+                    <span className="text-text-muted truncate max-w-[140px]">
+                      {prog.domain}
+                    </span>
+                    <span className="text-brand font-bold flex items-center gap-1">
+                      Детальніше <ChevronRight size={12} />
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* АРХІТЕКТУРНІ ПЕРЕВАГИ */}
         <section className="max-w-7xl mx-auto w-full px-4 lg:px-0 text-left space-y-8">
           <div className="space-y-2">
             <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest block">
-              // Архітектурні переваги
+              // Інфраструктура
             </span>
             <h2 className="text-2xl sm:text-3xl font-black font-sans uppercase tracking-tight text-text-primary">
               Інфраструктура нового покоління
@@ -473,6 +708,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* ПАРТНЕРСЬКІ ОРГАНІЗАЦІЇ */}
         {organizations.length > 0 && (
           <ScrollReveal
             variants={fadeInUp}
@@ -484,9 +720,9 @@ export default function HomePage() {
               </span>
               <Link
                 to="/programs"
-                className="text-xs font-mono text-brand hover:underline flex items-center gap-1"
+                className="text-xs font-mono text-brand hover:underline flex items-center gap-1 font-bold uppercase tracking-wider"
               >
-                Переглянути всі <ChevronRight size={14} />
+                Переглянути всі ({totalOrgs}) <ChevronRight size={14} />
               </Link>
             </div>
 
@@ -506,6 +742,7 @@ export default function HomePage() {
           </ScrollReveal>
         )}
 
+        {/* ДОРОЖНЯ КАРТА (TIMELINE) */}
         <ScrollReveal
           variants={fadeInUp}
           className="max-w-7xl mx-auto w-full px-4 lg:px-0 space-y-8 text-left"
@@ -524,6 +761,70 @@ export default function HomePage() {
           </Card>
         </ScrollReveal>
 
+        {/* БЛОК СВІЖИХ НОВИН ТА БЛОГУ */}
+        {latestPosts.length > 0 && (
+          <section className="max-w-7xl mx-auto w-full px-4 lg:px-0 text-left space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-mono uppercase text-brand font-bold tracking-widest block">
+                  // Новини та аналітика
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black font-sans uppercase tracking-tight text-text-primary">
+                  Останні статті в блозі
+                </h2>
+              </div>
+              <Link
+                to="/blog"
+                className="text-xs font-mono text-brand hover:underline flex items-center gap-1 font-bold uppercase tracking-wider"
+              >
+                Читати блог <ChevronRight size={14} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {latestPosts.map((post) => (
+                <Card
+                  key={post._id}
+                  hoverable
+                  onClick={() => navigate(`/blog/${post._id}`)}
+                  className="p-5 bg-bg-secondary/90 border-border-color space-y-3 cursor-pointer flex flex-col justify-between hover:border-brand/50 transition-all"
+                >
+                  <div className="space-y-3">
+                    {post.images && post.images.length > 0 && (
+                      <div className="w-full h-36 rounded-xl overflow-hidden bg-bg-tertiary relative">
+                        <img
+                          src={post.images[0].url}
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <Badge status="default" className="font-mono text-[10px]">
+                      {post.category || "Стаття"}
+                    </Badge>
+                    <h3 className="font-bold text-sm text-text-primary line-clamp-2 font-sans">
+                      {post.title}
+                    </h3>
+                    <p className="text-xs text-text-secondary line-clamp-2">
+                      {post.content}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-border-color/60 flex items-center justify-between text-[11px] font-mono text-text-muted">
+                    <span>
+                      {new Date(post.createdAt).toLocaleDateString("uk-UA")}
+                    </span>
+                    <span className="text-brand font-bold flex items-center gap-1">
+                      Читати <ChevronRight size={12} />
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* FAQ (ЗАКРИВАЮЧІ ПИТАННЯ) */}
         <ScrollReveal
           variants={fadeInUp}
           className="max-w-4xl mx-auto w-full px-4 lg:px-6 space-y-8 text-left"
@@ -546,6 +847,7 @@ export default function HomePage() {
           </div>
         </ScrollReveal>
 
+        {/* БАНЕР ЗАКЛИКУ ДО ДІЇ (CTA) */}
         <section className="max-w-7xl mx-auto w-full px-4 lg:px-0">
           <Card className="p-8 sm:p-12 bg-bg-secondary/80 border border-border-color rounded-3xl relative overflow-hidden shadow-xl text-left space-y-6 backdrop-blur-md">
             <div className="absolute right-0 top-0 w-96 h-96 bg-brand/10 rounded-full blur-3xl pointer-events-none" />

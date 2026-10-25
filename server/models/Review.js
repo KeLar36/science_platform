@@ -39,7 +39,7 @@ const BaseReviewSchema = new mongoose.Schema(
     },
     privateComment: {
       type: String,
-      default: "", // Тільки для редактора / адміна
+      default: "",
       trim: true,
     },
     totalScore: {
@@ -72,7 +72,6 @@ const getDiscriminator = (name, schema) => {
   return Review.discriminator(name, schema);
 };
 
-// 1. Науковий журнал
 const JournalReview = getDiscriminator(
   "Науковий журнал",
   new mongoose.Schema({
@@ -85,7 +84,6 @@ const JournalReview = getDiscriminator(
   }),
 );
 
-// 2. Грант
 const GrantReview = getDiscriminator(
   "Грант",
   new mongoose.Schema({
@@ -98,7 +96,6 @@ const GrantReview = getDiscriminator(
   }),
 );
 
-// 3. Конференція
 const ConferenceReview = getDiscriminator(
   "Конференція",
   new mongoose.Schema({
@@ -110,7 +107,6 @@ const ConferenceReview = getDiscriminator(
   }),
 );
 
-// 4. Стаття
 const ArticleReview = getDiscriminator(
   "Стаття",
   new mongoose.Schema({
@@ -121,7 +117,6 @@ const ArticleReview = getDiscriminator(
   }),
 );
 
-// 5. Датасет
 const DatasetReview = getDiscriminator(
   "Датасет",
   new mongoose.Schema({
@@ -133,7 +128,6 @@ const DatasetReview = getDiscriminator(
   }),
 );
 
-// 6. Курс
 const CourseReview = getDiscriminator(
   "Курс",
   new mongoose.Schema({

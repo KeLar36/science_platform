@@ -70,7 +70,8 @@ const UserSchema = new mongoose.Schema(
   },
 );
 
-UserSchema.index({ role: 1, isBanned: 1, allowedDomains: 1, allowedTypes: 1 });
+UserSchema.index({ role: 1, isBanned: 1 });
+
 UserSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   try {
@@ -87,43 +88,45 @@ UserSchema.methods.comparePassword = async function (candidatePassword) {
 
 const User = mongoose.model("User", UserSchema);
 
-const ReviewerDiscriminator = User.discriminator(
-  "reviewer",
-  new mongoose.Schema({
-    academicDegree: {
-      type: String,
-      enum: [
-        "Немає / Дослідник",
-        "Кандидат наук / PhD",
-        "Доктор наук",
-        "Доцент",
-        "Професор",
-        "Інше",
-      ],
-      default: "Немає / Дослідник",
-    },
-    allowedDomains: {
-      type: [String],
-      default: [],
-    },
-    allowedTypes: {
-      type: [String],
-      default: [],
-      validate: {
-        validator: function (v) {
-          if (!Array.isArray(v) || v.length === 0) return true;
-          const Program = mongoose.model("Program");
-          const validTypes = Object.keys(Program.discriminators || {});
-          return v.every((type) => validTypes.includes(type));
-        },
-        message: "Обраний тип програми не існує в системній моделі програм!",
-      },
-    },
-    isReviewerActive: {
-      type: Boolean,
-      default: true,
-    },
-  }),
-);
+const ReviewerSchema = new mongoose.Schema({
+  academicDegree: {
+    type: String,
+    enum: [
+      "Немає / Дослідник",
+      "Кандидат наук / PhD",
+      "Доктор наук",
+      "Доцент",
+      "Професор",
+      "Інше",
+    ],
+    default: "Немає / Дослідник",
+  },
+  allowedDomains: {
+    type: [String],
+    default: [],
+  },
+  allowedTypes: {
+    type: [String],
+    default: [],
+  },
+  isReviewerActive: {
+    type: Boolean,
+    default: true,
+  },
+  assignedProjectsCount: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  lastAssignedAt: {
+    type: Date,
+    default: null,
+  },
+});
+
+ReviewerSchema.index({ allowedDomains: 1 });
+ReviewerSchema.index({ allowedTypes: 1 });
+
+User.discriminator("reviewer", ReviewerSchema);
 
 module.exports = User;

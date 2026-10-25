@@ -17,6 +17,7 @@ export function useProfile() {
     accepted: 0,
     pending: 0,
     needsRevision: 0,
+    rejected: 0,
   });
 
   const refreshProfile = useCallback(async () => {
@@ -46,20 +47,26 @@ export function useProfile() {
 
       setMyProjects(rawData || []);
 
-      const projectsArray = Array.isArray(rawData)
-        ? rawData
-        : rawData?.projects || [];
+      if (rawData?.stats) {
+        setStats(rawData.stats);
+      } else {
+        const projectsArray = Array.isArray(rawData)
+          ? rawData
+          : rawData?.projects || [];
 
-      setStats({
-        total: rawData?.totalItems ?? projectsArray.length,
-        accepted: projectsArray.filter((p) => p.status === "Прийнято").length,
-        pending: projectsArray.filter(
-          (p) => p.status === "На розгляді" || !p.status,
-        ).length,
-        needsRevision: projectsArray.filter(
-          (p) => p.status === "На доопрацюванні",
-        ).length,
-      });
+        setStats({
+          total: rawData?.totalItems ?? projectsArray.length,
+          accepted: projectsArray.filter((p) => p.status === "Прийнято").length,
+          pending: projectsArray.filter(
+            (p) => p.status === "На розгляді" || !p.status,
+          ).length,
+          needsRevision: projectsArray.filter(
+            (p) => p.status === "На доопрацюванні",
+          ).length,
+          rejected: projectsArray.filter((p) => p.status === "Відхилено")
+            .length,
+        });
+      }
     } catch (err) {
       console.error("Помилка завантаження моїх проєктів:", err);
     } finally {

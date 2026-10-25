@@ -16,27 +16,30 @@ export default function SuperadminReviewersTab() {
   } = useAdminData();
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     if (typeof fetchUsers === "function") {
-      fetchUsers(pagination?.currentPage || 1, { search, role: "reviewer" });
+      fetchUsers(pagination?.currentPage || 1, {
+        search: debouncedSearch.trim(),
+        role: "reviewer",
+      });
     }
-  }, [pagination?.currentPage, search, fetchUsers]);
+  }, [pagination?.currentPage, debouncedSearch, fetchUsers]);
 
   const reviewerList = Array.isArray(users) ? users : [];
 
-  if (loading && reviewerList.length === 0) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3].map((n) => (
-          <Skeleton key={n} variant="rectangle" height="300px" />
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 text-left">
+      {/* ФІЛЬТРИ ТА ПОШУК (Фіксований блок у DOM) */}
       <div className="bg-bg-secondary p-3 rounded-xl border border-border-color">
         <Input
           placeholder="Шукати рецензента за ім'ям або email..."
@@ -46,7 +49,13 @@ export default function SuperadminReviewersTab() {
         />
       </div>
 
-      {reviewerList.length === 0 ? (
+      {loading && reviewerList.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((n) => (
+            <Skeleton key={n} variant="rectangle" height="300px" />
+          ))}
+        </div>
+      ) : reviewerList.length === 0 ? (
         <Card className="p-12 text-center space-y-3 bg-bg-secondary/40 border-dashed">
           <UserCheck className="mx-auto text-text-muted opacity-50" size={48} />
           <p className="text-sm font-mono text-text-muted">
@@ -118,7 +127,7 @@ export default function SuperadminReviewersTab() {
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-text-muted font-bold  flex items-center gap-1">
+                    <span className="text-[10px] uppercase tracking-wider text-text-muted font-bold flex items-center gap-1">
                       <Tag size={11} className="text-purple-600" /> Наукові
                       галузі:
                     </span>
@@ -174,7 +183,10 @@ export default function SuperadminReviewersTab() {
           currentPage={pagination.currentPage || 1}
           totalPages={pagination.totalPages || 1}
           onPageChange={(page) =>
-            fetchUsers(page, { search, role: "reviewer" })
+            fetchUsers(page, {
+              search: debouncedSearch.trim(),
+              role: "reviewer",
+            })
           }
         />
       )}
